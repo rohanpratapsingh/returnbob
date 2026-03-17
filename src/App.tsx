@@ -1,10 +1,105 @@
-// @ts-nocheck
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+
+// ── DARK MODE CSS ──────────────────────────────────────────
+const DARK_CSS = `
+  :root {
+    --rb-bg:       #ffffff;
+    --rb-bg2:      #f5f5f5;
+    --rb-bg3:      #ebebeb;
+    --rb-text:     #111111;
+    --rb-text2:    #555555;
+    --rb-text3:    #888888;
+    --rb-border:   rgba(0,0,0,0.10);
+    --rb-border2:  rgba(0,0,0,0.18);
+
+    --rb-green-bg:   #E6F5EE;  --rb-green-br:  #5DCAA5;  --rb-green-col: #0A6E4A;  --rb-green-dk: #064D34;
+    --rb-blue-bg:    #EBF3FD;  --rb-blue-br:   #B5D4F4;  --rb-blue-col:  #185FA5;  --rb-blue-dk:  #0C447C;
+    --rb-amber-bg:   #FDF3E3;  --rb-amber-br:  #EF9F27;  --rb-amber-col: #92570A;  --rb-amber-dk: #6B3D06;
+    --rb-red-bg:     #FEF2F2;  --rb-red-br:    #F09595;  --rb-red-col:   #991B1B;  --rb-red-dk:   #7A1515;
+    --rb-purple-bg:  #F3F0FE;  --rb-purple-col:#4B3FC1;
+    --rb-gray-bg:    #F3F4F6;  --rb-gray-br:   #D1D5DB;  --rb-gray-col:  #4B5563;
+
+    --rb-tc-bg: #EBF3FD; --rb-tc-br: #B5D4F4; --rb-tc-col: #185FA5; --rb-tc-dk: #0C447C;
+    --rb-hm-bg: #E6F5EE; --rb-hm-br: #9FE1CB; --rb-hm-col: #0A6E4A; --rb-hm-dk: #064D34;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --rb-bg:       #1a1a1a;
+      --rb-bg2:      #242424;
+      --rb-bg3:      #2e2e2e;
+      --rb-text:     #f0f0f0;
+      --rb-text2:    #a0a0a0;
+      --rb-text3:    #666666;
+      --rb-border:   rgba(255,255,255,0.10);
+      --rb-border2:  rgba(255,255,255,0.18);
+
+      --rb-green-bg:   #0d2e1f;  --rb-green-br:  #1a5c3a;  --rb-green-col: #4ade9a;  --rb-green-dk: #6efbb4;
+      --rb-blue-bg:    #0d1f35;  --rb-blue-br:   #1a3a6b;  --rb-blue-col:  #60a5fa;  --rb-blue-dk:  #93c5fd;
+      --rb-amber-bg:   #2d1d06;  --rb-amber-br:  #7a4a10;  --rb-amber-col: #fbbf24;  --rb-amber-dk: #fcd34d;
+      --rb-red-bg:     #2d0d0d;  --rb-red-br:    #7a1515;  --rb-red-col:   #f87171;  --rb-red-dk:   #fca5a5;
+      --rb-purple-bg:  #1e1a3d;  --rb-purple-col:#a78bfa;
+      --rb-gray-bg:    #1f2128;  --rb-gray-br:   #374151;  --rb-gray-col:  #9ca3af;
+
+      --rb-tc-bg: #0d1f35; --rb-tc-br: #1a3a6b; --rb-tc-col: #60a5fa; --rb-tc-dk: #93c5fd;
+      --rb-hm-bg: #0d2e1f; --rb-hm-br: #1a5c3a; --rb-hm-col: #4ade9a; --rb-hm-dk: #6efbb4;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--rb-bg3);
+    color: var(--rb-text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    margin: 0;
+  }
+  input, textarea, button, select {
+    font-family: inherit;
+    color: var(--rb-text);
+  }
+  input, textarea {
+    background: var(--rb-bg);
+    border: 1px solid var(--rb-border2);
+    color: var(--rb-text);
+  }
+  input::placeholder, textarea::placeholder { color: var(--rb-text3); }
+`;
+
+function GlobalStyles() {
+  useEffect(() => {
+    const el = document.createElement("style");
+    el.textContent = DARK_CSS;
+    document.head.appendChild(el);
+    return () => document.head.removeChild(el);
+  }, []);
+  return null;
+}
+
+// ── THEME HELPERS ──────────────────────────────────────────
+// Replace hardcoded hex with CSS var references
+const T = {
+  bg:        "var(--rb-bg)",
+  bg2:       "var(--rb-bg2)",
+  bg3:       "var(--rb-bg3)",
+  text:      "var(--rb-text)",
+  text2:     "var(--rb-text2)",
+  text3:     "var(--rb-text3)",
+  border:    "var(--rb-border)",
+  border2:   "var(--rb-border2)",
+
+  greenBg:   "var(--rb-green-bg)",   greenBr:  "var(--rb-green-br)",  greenCol: "var(--rb-green-col)",  greenDk: "var(--rb-green-dk)",
+  blueBg:    "var(--rb-blue-bg)",    blueBr:   "var(--rb-blue-br)",   blueCol:  "var(--rb-blue-col)",   blueDk:  "var(--rb-blue-dk)",
+  amberBg:   "var(--rb-amber-bg)",   amberBr:  "var(--rb-amber-br)",  amberCol: "var(--rb-amber-col)",  amberDk: "var(--rb-amber-dk)",
+  redBg:     "var(--rb-red-bg)",     redBr:    "var(--rb-red-br)",    redCol:   "var(--rb-red-col)",    redDk:   "var(--rb-red-dk)",
+  purpleBg:  "var(--rb-purple-bg)",  purpleCol:"var(--rb-purple-col)",
+  grayBg:    "var(--rb-gray-bg)",    grayBr:   "var(--rb-gray-br)",   grayCol:  "var(--rb-gray-col)",
+
+  tcBg:  "var(--rb-tc-bg)",  tcBr:  "var(--rb-tc-br)",  tcCol:  "var(--rb-tc-col)",  tcDk:  "var(--rb-tc-dk)",
+  hmBg:  "var(--rb-hm-bg)",  hmBr:  "var(--rb-hm-br)",  hmCol:  "var(--rb-hm-col)",  hmDk:  "var(--rb-hm-dk)",
+};
 
 // ── DATA ───────────────────────────────────────────────────
 const MERCHANTS = {
-  TC: { name:"True Classic",  tagline:"Premium basics",      col:"#185FA5", bg:"#EBF3FD", br:"#B5D4F4", dk:"#0C447C" },
-  HM: { name:"Hommey",        tagline:"Comfort home goods",  col:"#0A6E4A", bg:"#E6F5EE", br:"#9FE1CB", dk:"#064D34" },
+  TC: { name:"True Classic",  tagline:"Premium basics",      col:T.tcCol,  bg:T.tcBg,  br:T.tcBr,  dk:T.tcDk  },
+  HM: { name:"Hommey",        tagline:"Comfort home goods",  col:T.hmCol,  bg:T.hmBg,  br:T.hmBr,  dk:T.hmDk  },
 };
 const USERS = {
   "QR-A01": { name:"Marcus R.", ini:"MR", role:"associate",  id:"A01", mer:"TC" },
@@ -12,10 +107,10 @@ const USERS = {
   "QR-S01": { name:"Dana K.",   ini:"DK", role:"supervisor", id:"S01", mer:null },
 };
 const CONDITIONS = [
-  { id:"new",     grade:"A", label:"New / Unworn",        detail:"Tags on, never worn, original packaging intact", col:"#0A6E4A", bg:"#E6F5EE", br:"#5DCAA5", route:"direct_restock", steps:["Confirm all tags attached","Check packaging sealed and undamaged","Verify SKU matches system","Place directly in restock Gaylord"], note:"Grade A — direct to restock, no VAS required." },
-  { id:"good",    grade:"B", label:"Good — minor issues",  detail:"Tried on, needs rebag or retag before restock",  col:"#185FA5", bg:"#EBF3FD", br:"#85B7EB", route:"vas",            steps:["Inspect garment front and back","Note any minor defects","Confirm SKU label readable","Select VAS steps on next screen"], note:"Grade B — VAS required before restocking." },
-  { id:"worn",    grade:"C", label:"Visible wear",         detail:"Pilling, fading, or minor snags present",        col:"#92570A", bg:"#FDF3E3", br:"#EF9F27", route:"donate",         steps:["Document visible wear or damage","Confirm item is clean and wearable","No retag or rebag required","Route to Donate Gaylord"], note:"Grade C — donate, no VAS required." },
-  { id:"damaged", grade:"D", label:"Damaged / Defective",  detail:"Stains, tears, broken hardware or unusable",     col:"#991B1B", bg:"#FEF2F2", br:"#F09595", route:"dispose",        steps:["Document all damage","Confirm item cannot be resold","No processing required","Route to Scrap Gaylord"], note:"Grade D — dispose, no VAS required." },
+  { id:"new",     grade:"A", label:"New / Unworn",        detail:"Tags on, never worn, original packaging intact", col:T.greenCol, bg:T.greenBg, br:T.greenBr, route:"direct_restock", steps:["Confirm all tags attached","Check packaging sealed and undamaged","Verify SKU matches system","Place directly in restock Gaylord"], note:"Grade A — direct to restock, no VAS required." },
+  { id:"good",    grade:"B", label:"Good — minor issues",  detail:"Tried on, needs rebag or retag before restock",  col:T.blueCol,  bg:T.blueBg,  br:T.blueBr,  route:"vas",            steps:["Inspect garment front and back","Note any minor defects","Confirm SKU label readable","Select VAS steps on next screen"], note:"Grade B — VAS required before restocking." },
+  { id:"worn",    grade:"C", label:"Visible wear",         detail:"Pilling, fading, or minor snags present",        col:T.amberCol, bg:T.amberBg, br:T.amberBr, route:"donate",         steps:["Document visible wear or damage","Confirm item is clean and wearable","No retag or rebag required","Route to Donate Gaylord"], note:"Grade C — donate, no VAS required." },
+  { id:"damaged", grade:"D", label:"Damaged / Defective",  detail:"Stains, tears, broken hardware or unusable",     col:T.redCol,   bg:T.redBg,   br:T.redBr,   route:"dispose",        steps:["Document all damage","Confirm item cannot be resold","No processing required","Route to Scrap Gaylord"], note:"Grade D — dispose, no VAS required." },
 ];
 const VAS_STEPS = [
   { id:"rebag",   label:"Rebag",             icon:"◻", bt:false, mandatory:false, detail:"Place in fresh polybag and seal",          steps:["Remove item from current packaging","Inspect new polybag for damage","Fold item and place inside","Seal with brand sticker","Verify sticker flush — no air pockets"] },
@@ -26,14 +121,14 @@ const VAS_STEPS = [
   { id:"inspect", label:"Quality inspect",   icon:"◎", bt:false, mandatory:true,  detail:"Final check — no defects, SKU correct",   steps:["Hold at arm's length — check overall presentation","Check seams for loose threads","Confirm SKU label matches system","Verify tags secure","Flag exception or re-grade if any issue found"] },
 ];
 const VAS_OUTCOMES = [
-  { id:"restock", label:"Restock", detail:"VAS complete — item meets resale standard", col:"#0A6E4A", bg:"#E6F5EE" },
-  { id:"donate",  label:"Donate",  detail:"Item not suitable for resale after VAS",    col:"#92570A", bg:"#FDF3E3" },
-  { id:"dispose", label:"Dispose", detail:"Item cannot be resold or donated",          col:"#991B1B", bg:"#FEF2F2" },
+  { id:"restock", label:"Restock", detail:"VAS complete — item meets resale standard", col:T.greenCol, bg:T.greenBg },
+  { id:"donate",  label:"Donate",  detail:"Item not suitable for resale after VAS",    col:T.amberCol, bg:T.amberBg },
+  { id:"dispose", label:"Dispose", detail:"Item cannot be resold or donated",          col:T.redCol,   bg:T.redBg   },
 ];
 const GAYLORDS = {
-  restock: { label:"Restock", gid:"TC-RSTOCK-01", loc:"Zone A · Row 3 · Bay 2", col:"#0A6E4A", bg:"#E6F5EE", cap:84,  used:47 },
-  donate:  { label:"Donate",  gid:"TC-DONATE-01", loc:"Zone C · Row 1 · Bay 4", col:"#92570A", bg:"#FDF3E3", cap:120, used:89 },
-  dispose: { label:"Dispose", gid:"TC-SCRAP-01",  loc:"Zone D · Row 2 · Bay 1", col:"#991B1B", bg:"#FEF2F2", cap:200, used:31 },
+  restock: { label:"Restock", gid:"TC-RSTOCK-01", loc:"Zone A · Row 3 · Bay 2", col:T.greenCol, bg:T.greenBg, cap:84,  used:47 },
+  donate:  { label:"Donate",  gid:"TC-DONATE-01", loc:"Zone C · Row 1 · Bay 4", col:T.amberCol, bg:T.amberBg, cap:120, used:89 },
+  dispose: { label:"Dispose", gid:"TC-SCRAP-01",  loc:"Zone D · Row 2 · Bay 1", col:T.redCol,   bg:T.redBg,   cap:200, used:31 },
 };
 
 // ── LIVE SHIFT STATE (starts empty, fills from real work) ──
@@ -56,8 +151,8 @@ const makeAssocEntry = (user) => ({
   vas: 0,
 });
 
-const GC = { A:"#0A6E4A", B:"#185FA5", C:"#92570A", D:"#991B1B" };
-const GB = { A:"#E6F5EE", B:"#EBF3FD", C:"#FDF3E3", D:"#FEF2F2" };
+const GC = { A:T.greenCol, B:T.blueCol,  C:T.amberCol, D:T.redCol  };
+const GB = { A:T.greenBg,  B:T.blueBg,   C:T.amberBg,  D:T.redBg   };
 const INIT_ASTATS = { n:0, tgt:60, gr:{A:0,B:0,C:0,D:0}, vas:0, vasUnits:0, rs:0, dn:0, dp:0, exc:0 };
 
 // ── CSV UTILS ──────────────────────────────────────────────
@@ -93,26 +188,27 @@ const rowToRMA = (row, i, seen) => {
 
 // ── SHARED UI ──────────────────────────────────────────────
 function Card({ children, style, onClick }) {
-  return <div onClick={onClick} style={{ background:"var(--color-background-primary)", border:"0.5px solid var(--color-border-tertiary)", borderRadius:14, padding:"18px 20px", marginBottom:14, cursor:onClick?"pointer":"default", ...style }}>{children}</div>;
+  return <div onClick={onClick} style={{ background:T.bg, border:`0.5px solid ${T.border}`, borderRadius:14, padding:"18px 20px", marginBottom:14, cursor:onClick?"pointer":"default", ...style }}>{children}</div>;
 }
-function Btn({ children, onClick, col="#111", tc="#fff", disabled, style }) {
-  return <button onClick={onClick} disabled={disabled} style={{ background:col, color:tc, border:"none", padding:"16px 20px", borderRadius:12, fontSize:15, fontWeight:600, cursor:disabled?"not-allowed":"pointer", opacity:disabled?0.4:1, width:"100%", textAlign:"center", lineHeight:1.3, ...style }}>{children}</button>;
+function Btn({ children, onClick, col, tc="#fff", disabled, style }) {
+  const bg = col || T.text;
+  return <button onClick={onClick} disabled={disabled} style={{ background:bg, color:tc, border:"none", padding:"16px 20px", borderRadius:12, fontSize:15, fontWeight:600, cursor:disabled?"not-allowed":"pointer", opacity:disabled?0.4:1, width:"100%", textAlign:"center", lineHeight:1.3, ...style }}>{children}</button>;
 }
 function Ghost({ children, onClick, style }) {
-  return <button onClick={onClick} style={{ background:"transparent", color:"var(--color-text-secondary)", border:"1px solid var(--color-border-secondary)", padding:"13px 20px", borderRadius:12, fontSize:14, cursor:"pointer", width:"100%", textAlign:"center", ...style }}>{children}</button>;
+  return <button onClick={onClick} style={{ background:"transparent", color:T.text2, border:`1px solid ${T.border2}`, padding:"13px 20px", borderRadius:12, fontSize:14, cursor:"pointer", width:"100%", textAlign:"center", ...style }}>{children}</button>;
 }
-function Av({ ini, sz=36, bg="#EBF3FD", col="#185FA5" }) {
-  return <div style={{ width:sz, height:sz, borderRadius:"50%", background:bg, color:col, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:sz*0.32, flexShrink:0 }}>{ini}</div>;
+function Av({ ini, sz=36, bg, col }) {
+  return <div style={{ width:sz, height:sz, borderRadius:"50%", background:bg||T.blueBg, color:col||T.blueCol, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:700, fontSize:sz*0.32, flexShrink:0 }}>{ini}</div>;
 }
 function Tag({ children, col, bg, br }) {
   return <span style={{ background:bg, color:col, border:`1px solid ${br||col}`, fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:20 }}>{children}</span>;
 }
 function SL({ children, mt=4 }) {
-  return <div style={{ fontSize:11, fontWeight:700, color:"var(--color-text-secondary)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10, marginTop:mt }}>{children}</div>;
+  return <div style={{ fontSize:11, fontWeight:700, color:T.text2, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10, marginTop:mt }}>{children}</div>;
 }
 function MiniBar({ val, max, col, h=6 }) {
   const pct = max>0 ? Math.min(100,Math.round((val/max)*100)) : 0;
-  return <div style={{ background:"var(--color-background-tertiary)", borderRadius:4, height:h, overflow:"hidden" }}><div style={{ width:`${pct}%`, height:h, background:col, borderRadius:4, transition:"width 0.4s" }}/></div>;
+  return <div style={{ background:T.bg3, borderRadius:4, height:h, overflow:"hidden" }}><div style={{ width:`${pct}%`, height:h, background:col, borderRadius:4, transition:"width 0.4s" }}/></div>;
 }
 function StepBar({ steps, cur }) {
   return (
@@ -120,12 +216,12 @@ function StepBar({ steps, cur }) {
       {steps.map((s,i) => (
         <div key={s} style={{ display:"flex", alignItems:"center", flex:i<steps.length-1?1:0 }}>
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:5 }}>
-            <div style={{ width:26, height:26, borderRadius:"50%", background:i<cur?"#0A6E4A":i===cur?"#111":"var(--color-background-secondary)", border:`2px solid ${i<=cur?"transparent":"var(--color-border-secondary)"}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:i<=cur?"#fff":"var(--color-text-tertiary)", flexShrink:0 }}>
+            <div style={{ width:26, height:26, borderRadius:"50%", background:i<cur?T.greenCol:i===cur?T.text:T.bg2, border:`2px solid ${i<=cur?"transparent":T.border2}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:i<=cur?"#fff":T.text3, flexShrink:0 }}>
               {i<cur?"✓":i+1}
             </div>
-            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.05em", color:i===cur?"var(--color-text-primary)":"var(--color-text-tertiary)", whiteSpace:"nowrap", textTransform:"uppercase" }}>{s}</div>
+            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.05em", color:i===cur?T.text:T.text3, whiteSpace:"nowrap", textTransform:"uppercase" }}>{s}</div>
           </div>
-          {i<steps.length-1 && <div style={{ flex:1, height:2, background:i<cur?"#0A6E4A":"var(--color-border-tertiary)", margin:"0 6px", marginBottom:20, borderRadius:2 }}/>}
+          {i<steps.length-1 && <div style={{ flex:1, height:2, background:i<cur?T.greenCol:T.border, margin:"0 6px", marginBottom:20, borderRadius:2 }}/>}
         </div>
       ))}
     </div>
@@ -134,21 +230,21 @@ function StepBar({ steps, cur }) {
 function ItemCard({ r }) {
   const m = MERCHANTS[r.mer];
   return (
-    <Card style={{ marginBottom:16, background:"var(--color-background-secondary)" }}>
+    <Card style={{ marginBottom:16, background:T.bg2 }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
         <div style={{ display:"flex", gap:14, alignItems:"center" }}>
           <div style={{ fontSize:30, lineHeight:1 }}>{r.img}</div>
           <div>
-            <div style={{ fontSize:15, fontWeight:700, marginBottom:2 }}>{r.name}</div>
-            <div style={{ fontSize:12, color:"var(--color-text-secondary)", marginBottom:2 }}>{r.var}</div>
-            <div style={{ fontSize:11, color:"var(--color-text-tertiary)", fontFamily:"var(--font-mono)" }}>{r.sku}</div>
+            <div style={{ fontSize:15, fontWeight:700, marginBottom:2, color:T.text }}>{r.name}</div>
+            <div style={{ fontSize:12, color:T.text2, marginBottom:2 }}>{r.var}</div>
+            <div style={{ fontSize:11, color:T.text3, fontFamily:"monospace" }}>{r.sku}</div>
           </div>
         </div>
         {m && <Tag col={m.col} bg={m.bg} br={m.br}>{m.name}</Tag>}
       </div>
-      <div style={{ marginTop:12, padding:"8px 12px", background:"var(--color-background-primary)", borderRadius:8, border:"0.5px solid var(--color-border-tertiary)" }}>
-        <span style={{ fontSize:12, color:"var(--color-text-tertiary)" }}>Return reason: </span>
-        <span style={{ fontSize:12, fontWeight:500 }}>{r.reason}</span>
+      <div style={{ marginTop:12, padding:"8px 12px", background:T.bg, borderRadius:8, border:`0.5px solid ${T.border}` }}>
+        <span style={{ fontSize:12, color:T.text3 }}>Return reason: </span>
+        <span style={{ fontSize:12, fontWeight:500, color:T.text }}>{r.reason}</span>
       </div>
     </Card>
   );
@@ -162,12 +258,12 @@ function InstrPanel({ title, steps, note, col, bg, br }) {
         <span style={{ fontSize:12, color:col, opacity:0.7 }}>{open?"▲ hide":"▼ show"}</span>
       </div>
       {open && (
-        <div style={{ padding:"14px 16px", background:"var(--color-background-primary)" }}>
-          <div style={{ background:"var(--color-background-secondary)", borderRadius:8, padding:"8px 12px", marginBottom:12, textAlign:"center", fontSize:12, color:"var(--color-text-tertiary)" }}>No image uploaded — text instructions shown</div>
+        <div style={{ padding:"14px 16px", background:T.bg }}>
+          <div style={{ background:T.bg2, borderRadius:8, padding:"8px 12px", marginBottom:12, textAlign:"center", fontSize:12, color:T.text3 }}>No image uploaded — text instructions shown</div>
           {steps.map((s,i) => (
             <div key={i} style={{ display:"flex", gap:10, alignItems:"flex-start", marginBottom:10 }}>
               <div style={{ width:22, height:22, borderRadius:"50%", background:bg, border:`1px solid ${br}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:col, flexShrink:0 }}>{i+1}</div>
-              <div style={{ fontSize:13, color:"var(--color-text-primary)", lineHeight:1.55, paddingTop:2 }}>{s}</div>
+              <div style={{ fontSize:13, color:T.text, lineHeight:1.55, paddingTop:2 }}>{s}</div>
             </div>
           ))}
           {note && <div style={{ marginTop:10, padding:"8px 12px", background:bg, borderRadius:8, fontSize:12, color:col, fontWeight:600 }}>{note}</div>}
@@ -179,7 +275,7 @@ function InstrPanel({ title, steps, note, col, bg, br }) {
 function ExcFlag({ onClick }) {
   return (
     <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:12 }}>
-      <button onClick={onClick} style={{ fontSize:12, fontWeight:700, color:"#92570A", background:"#FDF3E3", border:"1px solid #EF9F27", borderRadius:8, padding:"7px 14px", cursor:"pointer" }}>⚑ Flag exception</button>
+      <button onClick={onClick} style={{ fontSize:12, fontWeight:700, color:T.amberCol, background:T.amberBg, border:`1px solid ${T.amberBr}`, borderRadius:8, padding:"7px 14px", cursor:"pointer" }}>⚑ Flag exception</button>
     </div>
   );
 }
@@ -221,71 +317,71 @@ function UploadScreen({ rmas, onUpload, onBack }) {
     {"po #":"PO-10043","outbound shipment id":"SHP-88822","name":"Cloud Slipper","sku":"HM-SLIPPER-BLK-8","label barcode":"LBL-HM-0031","return bag barcode":"BAG-HM-0041","order number":"ORD-20949","return reason":"Colour not as expected","quantity":"1","return previously reported":"false"},
   ];
   return (
-    <div style={{ minHeight:"100vh", background:"var(--color-background-tertiary)" }}>
-      <div style={{ background:"var(--color-background-primary)", borderBottom:"1px solid var(--color-border-tertiary)", padding:"14px 20px", display:"flex", alignItems:"center", gap:14 }}>
-        <button onClick={onBack} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"var(--color-text-secondary)", lineHeight:1 }}>‹</button>
-        <div><div style={{ fontSize:16, fontWeight:700 }}>Upload RMA file</div><div style={{ fontSize:12, color:"var(--color-text-secondary)", marginTop:1 }}>Shared queue — visible to all associates</div></div>
+    <div style={{ minHeight:"100vh", background:T.bg3 }}>
+      <div style={{ background:T.bg, borderBottom:`1px solid ${T.border}`, padding:"14px 20px", display:"flex", alignItems:"center", gap:14 }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:T.text2, lineHeight:1 }}>‹</button>
+        <div><div style={{ fontSize:16, fontWeight:700, color:T.text }}>Upload RMA file</div><div style={{ fontSize:12, color:T.text2, marginTop:1 }}>Shared queue — visible to all associates</div></div>
       </div>
       <div style={{ padding:16, maxWidth:560, margin:"0 auto" }}>
         <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={e=>handle(e.target.files[0])} style={{ display:"none" }}/>
         <div onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);handle(e.dataTransfer.files[0]);}} onClick={()=>fileRef.current.click()}
-          style={{ border:`2px dashed ${drag?"#185FA5":"var(--color-border-secondary)"}`, background:drag?"#EBF3FD":"var(--color-background-secondary)", borderRadius:16, padding:"44px 20px", textAlign:"center", cursor:"pointer", marginBottom:14 }}>
+          style={{ border:`2px dashed ${drag?T.blueCol:T.border2}`, background:drag?T.blueBg:T.bg2, borderRadius:16, padding:"44px 20px", textAlign:"center", cursor:"pointer", marginBottom:14 }}>
           <div style={{ fontSize:36, marginBottom:10 }}>📂</div>
-          <div style={{ fontSize:15, fontWeight:700, marginBottom:4 }}>Tap to select file</div>
-          <div style={{ fontSize:13, color:"var(--color-text-secondary)" }}>CSV · TSV · Excel</div>
+          <div style={{ fontSize:15, fontWeight:700, marginBottom:4, color:T.text }}>Tap to select file</div>
+          <div style={{ fontSize:13, color:T.text2 }}>CSV · TSV · Excel</div>
         </div>
-        {err && <div style={{ background:"#FEF2F2", border:"1px solid #F09595", borderRadius:10, padding:"10px 14px", fontSize:13, color:"#991B1B", marginBottom:12 }}>{err}</div>}
+        {err && <div style={{ background:T.redBg, border:`1px solid ${T.redBr}`, borderRadius:10, padding:"10px 14px", fontSize:13, color:T.redCol, marginBottom:12 }}>{err}</div>}
         {result && (
-          <Card style={{ background:result.loaded===result.total?"#E6F5EE":"#FDF3E3", border:`1px solid ${result.loaded===result.total?"#5DCAA5":"#EF9F27"}`, marginBottom:16 }}>
-            <div style={{ fontSize:14, fontWeight:700, color:result.loaded===result.total?"#0A6E4A":"#92570A", marginBottom:10 }}>{result.loaded===result.total?"✓":"⚠"} {result.loaded} of {result.total} rows loaded</div>
+          <Card style={{ background:result.loaded===result.total?T.greenBg:T.amberBg, border:`1px solid ${result.loaded===result.total?T.greenBr:T.amberBr}`, marginBottom:16 }}>
+            <div style={{ fontSize:14, fontWeight:700, color:result.loaded===result.total?T.greenCol:T.amberCol, marginBottom:10 }}>{result.loaded===result.total?"✓":"⚠"} {result.loaded} of {result.total} rows loaded</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
-              {[["In file",result.total,"var(--color-text-primary)"],["Loaded",result.loaded,"#0A6E4A"],["Dupes fixed",result.dupes,result.dupes>0?"#92570A":"#0A6E4A"]].map(([l,v,c])=>(
-                <div key={l} style={{ textAlign:"center", background:"var(--color-background-primary)", borderRadius:8, padding:"10px 6px" }}>
+              {[["In file",result.total,T.text],["Loaded",result.loaded,T.greenCol],["Dupes fixed",result.dupes,result.dupes>0?T.amberCol:T.greenCol]].map(([l,v,c])=>(
+                <div key={l} style={{ textAlign:"center", background:T.bg, borderRadius:8, padding:"10px 6px" }}>
                   <div style={{ fontSize:20, fontWeight:700, color:c }}>{v}</div>
-                  <div style={{ fontSize:10, fontWeight:700, color:"var(--color-text-secondary)", marginTop:2, textTransform:"uppercase", letterSpacing:"0.05em" }}>{l}</div>
+                  <div style={{ fontSize:10, fontWeight:700, color:T.text2, marginTop:2, textTransform:"uppercase", letterSpacing:"0.05em" }}>{l}</div>
                 </div>
               ))}
             </div>
-            {result.dupes>0 && <div style={{ marginTop:10, fontSize:12, color:"#92570A" }}>Duplicate IDs auto-fixed — all rows loaded.</div>}
+            {result.dupes>0 && <div style={{ marginTop:10, fontSize:12, color:T.amberCol }}>Duplicate IDs auto-fixed — all rows loaded.</div>}
           </Card>
         )}
         {preview && (
           <>
-            <Card style={{ background:"#E6F5EE", border:"1px solid #5DCAA5", marginBottom:12 }}>
-              <div style={{ fontSize:13, fontWeight:700, color:"#0A6E4A", marginBottom:8 }}>✓ {preview.length} RMAs ready to import</div>
+            <Card style={{ background:T.greenBg, border:`1px solid ${T.greenBr}`, marginBottom:12 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:T.greenCol, marginBottom:8 }}>✓ {preview.length} RMAs ready to import</div>
               {preview.slice(0,3).map((r,i) => {
                 const pid = r["label_barcode"]||r["return_bag_barcode"]||r["outbound_shipment_id"]||r["order_number"]||`Row ${i+1}`;
                 const isPrev = ["true","1","yes"].includes((r["return_previously_reported"]||"").toLowerCase());
                 return (
-                  <div key={i} style={{ padding:"6px 0", borderBottom:i<Math.min(2,preview.length-1)?"1px solid #9FE1CB":"none" }}>
+                  <div key={i} style={{ padding:"6px 0", borderBottom:i<Math.min(2,preview.length-1)?`1px solid ${T.greenBr}`:"none" }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span style={{ fontSize:12, color:"#0A6E4A", fontWeight:700 }}>{pid}</span>
+                      <span style={{ fontSize:12, color:T.greenCol, fontWeight:700 }}>{pid}</span>
                       <div style={{ display:"flex", gap:6 }}>
-                        {isPrev && <span style={{ fontSize:10, background:"#FDF3E3", color:"#92570A", border:"1px solid #EF9F27", borderRadius:10, padding:"1px 7px", fontWeight:700 }}>Prev</span>}
-                        <span style={{ fontSize:11, color:"#0A6E4A" }}>Qty: {r["quantity"]||"1"}</span>
+                        {isPrev && <span style={{ fontSize:10, background:T.amberBg, color:T.amberCol, border:`1px solid ${T.amberBr}`, borderRadius:10, padding:"1px 7px", fontWeight:700 }}>Prev</span>}
+                        <span style={{ fontSize:11, color:T.greenCol }}>Qty: {r["quantity"]||"1"}</span>
                       </div>
                     </div>
-                    <div style={{ fontSize:11, color:"#0A6E4A", marginTop:2, opacity:0.8 }}>{r["name"]||r["sku"]||"—"} · {r["return_reason"]||"—"}</div>
+                    <div style={{ fontSize:11, color:T.greenCol, marginTop:2, opacity:0.8 }}>{r["name"]||r["sku"]||"—"} · {r["return_reason"]||"—"}</div>
                   </div>
                 );
               })}
-              {preview.length>3 && <div style={{ fontSize:11, color:"#0A6E4A", marginTop:6, opacity:0.7 }}>+{preview.length-3} more</div>}
+              {preview.length>3 && <div style={{ fontSize:11, color:T.greenCol, marginTop:6, opacity:0.7 }}>+{preview.length-3} more</div>}
             </Card>
-            <Btn onClick={commit} col="#0A6E4A" style={{ marginBottom:10 }}>Add {preview.length} RMAs to queue →</Btn>
+            <Btn onClick={commit} col={T.greenCol} style={{ marginBottom:10 }}>Add {preview.length} RMAs to queue →</Btn>
             <Ghost onClick={()=>setPreview(null)}>Cancel</Ghost>
           </>
         )}
         {!preview && !result && (
           <>
-            <div style={{ textAlign:"center", margin:"16px 0 10px", fontSize:12, color:"var(--color-text-tertiary)" }}>— or download a sample template —</div>
+            <div style={{ textAlign:"center", margin:"16px 0 10px", fontSize:12, color:T.text3 }}>— or download a sample template —</div>
             <Ghost onClick={()=>dlCSV("returnbob_template.csv", SAMPLE)}>↓ Download CSV template</Ghost>
           </>
         )}
-        <Card style={{ background:"var(--color-background-secondary)", marginTop:20 }}>
+        <Card style={{ background:T.bg2, marginTop:20 }}>
           <SL mt={0}>Current queue · {Object.keys(rmas).length} items</SL>
           {Object.entries(MERCHANTS).map(([id,m]) => {
             const ct = Object.values(rmas).filter(r=>r.mer===id).length;
-            return <div key={id} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:"0.5px solid var(--color-border-tertiary)", fontSize:13 }}><span style={{ color:"var(--color-text-secondary)" }}>{m.name}</span><span style={{ fontWeight:700 }}>{ct} items</span></div>;
+            return <div key={id} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:`0.5px solid ${T.border}`, fontSize:13 }}><span style={{ color:T.text2 }}>{m.name}</span><span style={{ fontWeight:700, color:T.text }}>{ct} items</span></div>;
           })}
         </Card>
       </div>
@@ -302,30 +398,30 @@ function ExcScreen({ rmaId, onSave, onClose }) {
   const REASONS = ["Wrong item received","Damaged in transit","Missing components","Label mismatch","Customer claim dispute","Other"];
   const onPhoto = e => { const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>setPhoto(ev.target.result); r.readAsDataURL(f); };
   return (
-    <div style={{ minHeight:"100vh", background:"var(--color-background-tertiary)" }}>
-      <div style={{ background:"var(--color-background-primary)", borderBottom:"1px solid var(--color-border-tertiary)", padding:"14px 20px", display:"flex", alignItems:"center", gap:14 }}>
-        <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"var(--color-text-secondary)", lineHeight:1 }}>‹</button>
-        <div><div style={{ fontSize:16, fontWeight:700 }}>Flag exception</div><div style={{ fontSize:12, color:"var(--color-text-secondary)", marginTop:1 }}>Item held for supervisor review</div></div>
+    <div style={{ minHeight:"100vh", background:T.bg3 }}>
+      <div style={{ background:T.bg, borderBottom:`1px solid ${T.border}`, padding:"14px 20px", display:"flex", alignItems:"center", gap:14 }}>
+        <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:T.text2, lineHeight:1 }}>‹</button>
+        <div><div style={{ fontSize:16, fontWeight:700, color:T.text }}>Flag exception</div><div style={{ fontSize:12, color:T.text2, marginTop:1 }}>Item held for supervisor review</div></div>
       </div>
       <div style={{ padding:16, maxWidth:560, margin:"0 auto" }}>
-        <div style={{ background:"#FDF3E3", border:"1px solid #EF9F27", borderRadius:12, padding:"12px 16px", marginBottom:18, fontSize:13, color:"#92570A" }}>
+        <div style={{ background:T.amberBg, border:`1px solid ${T.amberBr}`, borderRadius:12, padding:"12px 16px", marginBottom:18, fontSize:13, color:T.amberCol }}>
           <strong>{rmaId}</strong> will be removed from queue and flagged for reconciliation.
         </div>
         <SL mt={0}>Select reason</SL>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:18 }}>
           {REASONS.map(r => (
-            <div key={r} onClick={()=>setReason(r)} style={{ padding:"12px", borderRadius:10, border:`2px solid ${reason===r?"#92570A":"var(--color-border-secondary)"}`, background:reason===r?"#FDF3E3":"var(--color-background-primary)", cursor:"pointer", fontSize:13, fontWeight:reason===r?700:400, color:reason===r?"#92570A":"var(--color-text-primary)", textAlign:"center" }}>{r}</div>
+            <div key={r} onClick={()=>setReason(r)} style={{ padding:"12px", borderRadius:10, border:`2px solid ${reason===r?T.amberCol:T.border2}`, background:reason===r?T.amberBg:T.bg, cursor:"pointer", fontSize:13, fontWeight:reason===r?700:400, color:reason===r?T.amberCol:T.text, textAlign:"center" }}>{r}</div>
           ))}
         </div>
         <SL>Notes (optional)</SL>
-        <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Describe the issue…" rows={3} style={{ width:"100%", padding:"12px 14px", borderRadius:10, border:"1px solid var(--color-border-secondary)", background:"var(--color-background-primary)", color:"var(--color-text-primary)", fontSize:13, resize:"none", outline:"none", boxSizing:"border-box", marginBottom:18 }}/>
+        <textarea value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Describe the issue…" rows={3} style={{ width:"100%", padding:"12px 14px", borderRadius:10, border:`1px solid ${T.border2}`, background:T.bg, color:T.text, fontSize:13, resize:"none", outline:"none", boxSizing:"border-box", marginBottom:18 }}/>
         <SL>Photo (optional)</SL>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={onPhoto} style={{ display:"none" }}/>
         {photo
           ? <div style={{ position:"relative", marginBottom:18 }}><img src={photo} alt="" style={{ width:"100%", borderRadius:10, maxHeight:200, objectFit:"cover" }}/><button onClick={()=>setPhoto(null)} style={{ position:"absolute", top:8, right:8, background:"rgba(0,0,0,0.65)", color:"#fff", border:"none", borderRadius:20, padding:"4px 12px", fontSize:12, cursor:"pointer" }}>Remove</button></div>
           : <Ghost onClick={()=>fileRef.current.click()} style={{ marginBottom:18 }}>📷 Take photo with iPad camera</Ghost>
         }
-        <Btn onClick={()=>reason&&onSave({reason,notes,photo})} disabled={!reason} col="#92570A" style={{ marginBottom:10 }}>Flag exception &amp; hold item</Btn>
+        <Btn onClick={()=>reason&&onSave({reason,notes,photo})} disabled={!reason} col={T.amberCol} style={{ marginBottom:10 }}>Flag exception &amp; hold item</Btn>
         <Ghost onClick={onClose}>Cancel — continue processing</Ghost>
       </div>
     </div>
@@ -344,38 +440,38 @@ function QRLogin({ onLogin }) {
     setTimeout(()=>{ setScanning(false); setDone(true); setTimeout(()=>onLogin(USERS[id]), 500); }, 2200);
   };
   return (
-    <div style={{ minHeight:"100vh", background:"var(--color-background-tertiary)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:28 }}>
+    <div style={{ minHeight:"100vh", background:T.bg3, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:28 }}>
       <div style={{ textAlign:"center", marginBottom:36 }}>
-        <div style={{ width:56, height:56, borderRadius:16, background:"#111", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:24 }}>📦</div>
-        <div style={{ fontSize:30, fontWeight:800, letterSpacing:"-0.5px", marginBottom:6 }}>ReturnBob</div>
-        <div style={{ fontSize:14, color:"var(--color-text-secondary)" }}>Warehouse Returns Platform</div>
+        <div style={{ width:56, height:56, borderRadius:16, background:T.text, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", fontSize:24 }}>📦</div>
+        <div style={{ fontSize:30, fontWeight:800, letterSpacing:"-0.5px", marginBottom:6, color:T.text }}>ReturnBob</div>
+        <div style={{ fontSize:14, color:T.text2 }}>Warehouse Returns Platform</div>
       </div>
       <Card style={{ width:"100%", maxWidth:340, padding:"28px 24px", marginBottom:0 }}>
         <div style={{ textAlign:"center", marginBottom:20 }}>
-          <div style={{ fontSize:15, fontWeight:700, marginBottom:4 }}>Scan your badge</div>
-          <div style={{ fontSize:13, color:"var(--color-text-secondary)" }}>Hold QR code up to camera</div>
+          <div style={{ fontSize:15, fontWeight:700, marginBottom:4, color:T.text }}>Scan your badge</div>
+          <div style={{ fontSize:13, color:T.text2 }}>Hold QR code up to camera</div>
         </div>
-        <div style={{ width:"100%", aspectRatio:"1", borderRadius:14, border:"2px dashed var(--color-border-secondary)", background:"var(--color-background-secondary)", display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden", marginBottom:20 }}>
+        <div style={{ width:"100%", aspectRatio:"1", borderRadius:14, border:`2px dashed ${T.border2}`, background:T.bg2, display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden", marginBottom:20 }}>
           {[["0%","0%"],["100%","0%"],["0%","100%"],["100%","100%"]].map(([l,t],i) => (
-            <div key={i} style={{ position:"absolute", left:l==="100%"?undefined:12, right:l==="100%"?12:undefined, top:t==="100%"?undefined:12, bottom:t==="100%"?12:undefined, width:22, height:22, borderTop:t==="100%"?"none":"3px solid #111", borderBottom:t==="100%"?"3px solid #111":"none", borderLeft:l==="100%"?"none":"3px solid #111", borderRight:l==="100%"?"3px solid #111":"none", borderRadius:3 }}/>
+            <div key={i} style={{ position:"absolute", left:l==="100%"?undefined:12, right:l==="100%"?12:undefined, top:t==="100%"?undefined:12, bottom:t==="100%"?12:undefined, width:22, height:22, borderTop:t==="100%"?"none":`3px solid ${T.text}`, borderBottom:t==="100%"?`3px solid ${T.text}`:"none", borderLeft:l==="100%"?"none":`3px solid ${T.text}`, borderRight:l==="100%"?`3px solid ${T.text}`:"none", borderRadius:3 }}/>
           ))}
-          {!scanning&&!done&&<div style={{ textAlign:"center" }}><div style={{ fontSize:48, color:"var(--color-text-tertiary)", marginBottom:8, lineHeight:1 }}>▣</div><div style={{ fontSize:12, color:"var(--color-text-tertiary)" }}>Position badge here</div></div>}
-          {scanning&&<div style={{ position:"absolute", inset:0 }}><div style={{ position:"absolute", left:0, right:0, height:2, background:"#185FA5", top:`${pct}%`, boxShadow:"0 0 10px #185FA5" }}/><div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}><div style={{ background:"rgba(235,243,253,0.96)", borderRadius:20, padding:"7px 18px", fontSize:13, color:"#185FA5", fontWeight:700 }}>Scanning…</div></div></div>}
-          {done&&<div style={{ textAlign:"center" }}><div style={{ width:54, height:54, borderRadius:"50%", background:"#E6F5EE", border:"2px solid #0A6E4A", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, margin:"0 auto 10px", color:"#0A6E4A" }}>✓</div><div style={{ fontSize:14, fontWeight:700, color:"#0A6E4A" }}>Authenticated</div></div>}
+          {!scanning&&!done&&<div style={{ textAlign:"center" }}><div style={{ fontSize:48, color:T.text3, marginBottom:8, lineHeight:1 }}>▣</div><div style={{ fontSize:12, color:T.text3 }}>Position badge here</div></div>}
+          {scanning&&<div style={{ position:"absolute", inset:0 }}><div style={{ position:"absolute", left:0, right:0, height:2, background:T.blueCol, top:`${pct}%` }}/><div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}><div style={{ background:T.blueBg, borderRadius:20, padding:"7px 18px", fontSize:13, color:T.blueCol, fontWeight:700 }}>Scanning…</div></div></div>}
+          {done&&<div style={{ textAlign:"center" }}><div style={{ width:54, height:54, borderRadius:"50%", background:T.greenBg, border:`2px solid ${T.greenCol}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, margin:"0 auto 10px", color:T.greenCol }}>✓</div><div style={{ fontSize:14, fontWeight:700, color:T.greenCol }}>Authenticated</div></div>}
         </div>
-        <div style={{ borderTop:"1px solid var(--color-border-tertiary)", paddingTop:16 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:"var(--color-text-tertiary)", textAlign:"center", marginBottom:12, textTransform:"uppercase", letterSpacing:"0.07em" }}>Demo — tap to simulate</div>
+        <div style={{ borderTop:`1px solid ${T.border}`, paddingTop:16 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:T.text3, textAlign:"center", marginBottom:12, textTransform:"uppercase", letterSpacing:"0.07em" }}>Demo — tap to simulate</div>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:8 }}>
             {[["QR-A01","Marcus R.","Associate"],["QR-A02","Priya S.","Associate"]].map(([id,name,role]) => (
-              <button key={id} onClick={()=>scan(id)} disabled={scanning||done} style={{ padding:"12px 8px", borderRadius:10, border:"1px solid var(--color-border-secondary)", background:"var(--color-background-secondary)", cursor:"pointer", textAlign:"center", opacity:scanning||done?0.5:1 }}>
-                <div style={{ fontSize:13, fontWeight:700 }}>{name}</div>
-                <div style={{ fontSize:11, color:"var(--color-text-secondary)", marginTop:2 }}>{role}</div>
+              <button key={id} onClick={()=>scan(id)} disabled={scanning||done} style={{ padding:"12px 8px", borderRadius:10, border:`1px solid ${T.border2}`, background:T.bg2, cursor:"pointer", textAlign:"center", opacity:scanning||done?0.5:1 }}>
+                <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{name}</div>
+                <div style={{ fontSize:11, color:T.text2, marginTop:2 }}>{role}</div>
               </button>
             ))}
           </div>
-          <button onClick={()=>scan("QR-S01")} disabled={scanning||done} style={{ width:"100%", padding:"12px", borderRadius:10, border:"1px solid #B5D4F4", background:"#EBF3FD", cursor:"pointer", opacity:scanning||done?0.5:1 }}>
-            <div style={{ fontSize:13, fontWeight:700, color:"#185FA5" }}>Dana K. — Supervisor</div>
-            <div style={{ fontSize:11, color:"#185FA5", opacity:0.7, marginTop:2 }}>Full analytics + reports</div>
+          <button onClick={()=>scan("QR-S01")} disabled={scanning||done} style={{ width:"100%", padding:"12px", borderRadius:10, border:`1px solid ${T.blueBr}`, background:T.blueBg, cursor:"pointer", opacity:scanning||done?0.5:1 }}>
+            <div style={{ fontSize:13, fontWeight:700, color:T.blueCol }}>Dana K. — Supervisor</div>
+            <div style={{ fontSize:11, color:T.blueCol, opacity:0.7, marginTop:2 }}>Full analytics + reports</div>
           </button>
         </div>
       </Card>
@@ -387,28 +483,27 @@ function QRLogin({ onLogin }) {
 function Shell({ user, mode, onMode, onLogout, onReset, children }) {
   const sup = user.role==="supervisor";
   return (
-    <div style={{ minHeight:"100vh", background:"var(--color-background-tertiary)" }}>
-      <div style={{ background:"var(--color-background-primary)", borderBottom:"1px solid var(--color-border-tertiary)", padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:20 }}>
+    <div style={{ minHeight:"100vh", background:T.bg3 }}>
+      <div style={{ background:T.bg, borderBottom:`1px solid ${T.border}`, padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:20 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <Av ini={user.ini} sz={34} bg={sup?"#F3F0FE":"#EBF3FD"} col={sup?"#4B3FC1":"#185FA5"}/>
+          <Av ini={user.ini} sz={34} bg={sup?T.purpleBg:T.blueBg} col={sup?T.purpleCol:T.blueCol}/>
           <div>
-            <div style={{ fontSize:14, fontWeight:700, lineHeight:1.2 }}>{user.name}</div>
-            <div style={{ fontSize:11, color:"var(--color-text-secondary)", marginTop:1 }}>{sup?"Supervisor":`Associate · ${user.mer?MERCHANTS[user.mer]?.name:"—"}`}</div>
+            <div style={{ fontSize:14, fontWeight:700, lineHeight:1.2, color:T.text }}>{user.name}</div>
+            <div style={{ fontSize:11, color:T.text2, marginTop:1 }}>{sup?"Supervisor":`Associate · ${user.mer?MERCHANTS[user.mer]?.name:"—"}`}</div>
           </div>
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
           {!sup && (
-            <div style={{ display:"flex", background:"var(--color-background-secondary)", borderRadius:10, padding:3, border:"1px solid var(--color-border-tertiary)" }}>
+            <div style={{ display:"flex", background:T.bg2, borderRadius:10, padding:3, border:`1px solid ${T.border}` }}>
               {["process","stats"].map(md => (
-                <button key={md} onClick={()=>onMode(md)} style={{ padding:"6px 14px", borderRadius:8, border:"none", fontSize:12, fontWeight:mode===md?700:400, background:mode===md?"var(--color-background-primary)":"transparent", color:mode===md?"var(--color-text-primary)":"var(--color-text-secondary)", cursor:"pointer", boxShadow:mode===md?"0 1px 4px rgba(0,0,0,0.1)":"none" }}>
+                <button key={md} onClick={()=>onMode(md)} style={{ padding:"6px 14px", borderRadius:8, border:"none", fontSize:12, fontWeight:mode===md?700:400, background:mode===md?T.bg:"transparent", color:mode===md?T.text:T.text2, cursor:"pointer", boxShadow:mode===md?"0 1px 4px rgba(0,0,0,0.15)":"none" }}>
                   {md==="process"?"⬡ Process":"◫ My stats"}
                 </button>
               ))}
             </div>
           )}
-          {/* Reset wipes the whole shift; Out just logs this user out, queue stays */}
-          <button onClick={onReset} title="Reset entire shift" style={{ fontSize:11, fontWeight:700, color:"#92570A", background:"#FDF3E3", border:"1px solid #EF9F27", borderRadius:8, padding:"6px 12px", cursor:"pointer" }}>↺ Reset shift</button>
-          <button onClick={onLogout} title="Log out — queue stays active" style={{ fontSize:11, color:"var(--color-text-secondary)", background:"none", border:"1px solid var(--color-border-secondary)", borderRadius:8, padding:"6px 10px", cursor:"pointer" }}>Out</button>
+          <button onClick={onReset} title="Reset entire shift" style={{ fontSize:11, fontWeight:700, color:T.amberCol, background:T.amberBg, border:`1px solid ${T.amberBr}`, borderRadius:8, padding:"6px 12px", cursor:"pointer" }}>↺ Reset shift</button>
+          <button onClick={onLogout} title="Log out — queue stays active" style={{ fontSize:11, color:T.text2, background:"none", border:`1px solid ${T.border2}`, borderRadius:8, padding:"6px 10px", cursor:"pointer" }}>Out</button>
         </div>
       </div>
       <div style={{ padding:16, maxWidth:560, margin:"0 auto" }}>{children}</div>
@@ -422,13 +517,13 @@ function MerchSelect({ rmas, onSelect, onUpload }) {
   return (
     <>
       <div style={{ marginBottom:22, paddingTop:4 }}>
-        <div style={{ fontSize:22, fontWeight:800, marginBottom:4 }}>Good morning 👋</div>
-        <div style={{ fontSize:14, color:"var(--color-text-secondary)" }}>Select a program to start processing returns</div>
+        <div style={{ fontSize:22, fontWeight:800, marginBottom:4, color:T.text }}>Good morning 👋</div>
+        <div style={{ fontSize:14, color:T.text2 }}>Select a program to start processing returns</div>
       </div>
       {total>0 && (
-        <div style={{ background:"#EBF3FD", border:"1px solid #B5D4F4", borderRadius:10, padding:"10px 14px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:8, height:8, borderRadius:"50%", background:"#185FA5", flexShrink:0 }}/>
-          <div style={{ fontSize:13, color:"#185FA5" }}><strong>{total}</strong> item{total!==1?"s":""} in shared queue — visible to all associates</div>
+        <div style={{ background:T.blueBg, border:`1px solid ${T.blueBr}`, borderRadius:10, padding:"10px 14px", marginBottom:16, display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:8, height:8, borderRadius:"50%", background:T.blueCol, flexShrink:0 }}/>
+          <div style={{ fontSize:13, color:T.blueCol }}><strong>{total}</strong> item{total!==1?"s":""} in shared queue — visible to all associates</div>
         </div>
       )}
       <SL mt={0}>Your programs</SL>
@@ -436,12 +531,12 @@ function MerchSelect({ rmas, onSelect, onUpload }) {
         const ct = Object.values(rmas).filter(r=>r.mer===id).length;
         return (
           <Card key={id} onClick={()=>onSelect(id)} style={{ display:"flex", alignItems:"center", gap:16, border:`1.5px solid ${m.br}`, background:m.bg, cursor:"pointer", padding:"20px" }}>
-            <div style={{ width:52, height:52, borderRadius:14, background:"var(--color-background-primary)", border:`1.5px solid ${m.br}`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:14, color:m.col, flexShrink:0 }}>{id}</div>
+            <div style={{ width:52, height:52, borderRadius:14, background:T.bg, border:`1.5px solid ${m.br}`, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:14, color:m.col, flexShrink:0 }}>{id}</div>
             <div style={{ flex:1 }}>
               <div style={{ fontSize:17, fontWeight:800, color:m.dk, marginBottom:2 }}>{m.name}</div>
               <div style={{ fontSize:13, color:m.col, marginBottom:8 }}>{m.tagline}</div>
               <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                <div style={{ width:8, height:8, borderRadius:"50%", background:ct>0?m.col:"var(--color-border-secondary)" }}/>
+                <div style={{ width:8, height:8, borderRadius:"50%", background:ct>0?m.col:T.border2 }}/>
                 <div style={{ fontSize:12, color:m.col, fontWeight:600 }}>{ct} item{ct!==1?"s":""} in queue</div>
               </div>
             </div>
@@ -473,32 +568,32 @@ function ScanScreen({ mer, rmas, onResult, onBack }) {
   return (
     <>
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:18 }}>
-        <button onClick={onBack} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"var(--color-text-secondary)", lineHeight:1 }}>‹</button>
+        <button onClick={onBack} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:T.text2, lineHeight:1 }}>‹</button>
         <Tag col={m.col} bg={m.bg} br={m.br}>{m.name}</Tag>
-        <span style={{ fontSize:13, color:"var(--color-text-secondary)" }}>Scan next item</span>
+        <span style={{ fontSize:13, color:T.text2 }}>Scan next item</span>
       </div>
-      <div onClick={simScan} style={{ background:scanning?"#111":"var(--color-background-secondary)", border:`2px dashed ${scanning?"#185FA5":"var(--color-border-secondary)"}`, borderRadius:18, padding:"48px 20px", textAlign:"center", cursor:"pointer", marginBottom:16 }}>
+      <div onClick={simScan} style={{ background:scanning?T.text:T.bg2, border:`2px dashed ${scanning?T.blueCol:T.border2}`, borderRadius:18, padding:"48px 20px", textAlign:"center", cursor:"pointer", marginBottom:16 }}>
         {scanning
-          ? <div><div style={{ fontSize:38, color:"#85B7EB", marginBottom:8 }}>◎</div><div style={{ fontSize:14, color:"#B5D4F4", fontWeight:700 }}>Scanning…</div></div>
-          : <div><div style={{ fontSize:50, color:"var(--color-text-tertiary)", marginBottom:10, lineHeight:1 }}>▣</div><div style={{ fontSize:15, color:"var(--color-text-secondary)", fontWeight:600 }}>Tap to scan item barcode</div><div style={{ fontSize:12, color:"var(--color-text-tertiary)", marginTop:4 }}>iPhone / iPad camera</div></div>}
+          ? <div><div style={{ fontSize:38, color:T.blueBr, marginBottom:8 }}>◎</div><div style={{ fontSize:14, color:T.blueBg, fontWeight:700 }}>Scanning…</div></div>
+          : <div><div style={{ fontSize:50, color:T.text3, marginBottom:10, lineHeight:1 }}>▣</div><div style={{ fontSize:15, color:T.text2, fontWeight:600 }}>Tap to scan item barcode</div><div style={{ fontSize:12, color:T.text3, marginTop:4 }}>iPhone / iPad camera</div></div>}
       </div>
       <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-        <input value={inp} onChange={e=>{setInp(e.target.value);setErr(null);}} onKeyDown={e=>e.key==="Enter"&&lookup(inp)} placeholder="Or type RMA ID…" style={{ flex:1, padding:"13px 14px", fontSize:14, borderRadius:10, border:"1px solid var(--color-border-secondary)", background:"var(--color-background-primary)", color:"var(--color-text-primary)", outline:"none" }}/>
-        <button onClick={()=>lookup(inp)} style={{ padding:"13px 18px", background:"#111", color:"#fff", border:"none", borderRadius:10, fontSize:15, cursor:"pointer", fontWeight:700 }}>→</button>
+        <input value={inp} onChange={e=>{setInp(e.target.value);setErr(null);}} onKeyDown={e=>e.key==="Enter"&&lookup(inp)} placeholder="Or type RMA ID…" style={{ flex:1, padding:"13px 14px", fontSize:14, borderRadius:10, border:`1px solid ${T.border2}`, background:T.bg, color:T.text, outline:"none" }}/>
+        <button onClick={()=>lookup(inp)} style={{ padding:"13px 18px", background:T.text, color:T.bg, border:"none", borderRadius:10, fontSize:15, cursor:"pointer", fontWeight:700 }}>→</button>
       </div>
-      {err && <div style={{ background:"#FEF2F2", border:"1px solid #F09595", borderRadius:10, padding:"10px 14px", fontSize:13, color:"#991B1B", marginBottom:10 }}>{err}</div>}
-      {queue.length===0 && <div style={{ background:"#FDF3E3", border:"1px solid #EF9F27", borderRadius:10, padding:"10px 14px", fontSize:13, color:"#92570A", marginBottom:10 }}>Queue empty — supervisor can load an RMA file for this shift</div>}
-      <Card style={{ background:"var(--color-background-secondary)", marginTop:8 }}>
+      {err && <div style={{ background:T.redBg, border:`1px solid ${T.redBr}`, borderRadius:10, padding:"10px 14px", fontSize:13, color:T.redCol, marginBottom:10 }}>{err}</div>}
+      {queue.length===0 && <div style={{ background:T.amberBg, border:`1px solid ${T.amberBr}`, borderRadius:10, padding:"10px 14px", fontSize:13, color:T.amberCol, marginBottom:10 }}>Queue empty — supervisor can load an RMA file for this shift</div>}
+      <Card style={{ background:T.bg2, marginTop:8 }}>
         <SL mt={0}>{m.name} — queue ({queue.length})</SL>
         {queue.map(([k,v]) => (
-          <div key={k} onClick={()=>lookup(k)} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"0.5px solid var(--color-border-tertiary)", cursor:"pointer" }}>
+          <div key={k} onClick={()=>lookup(k)} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:`0.5px solid ${T.border}`, cursor:"pointer" }}>
             <div style={{ fontSize:22, lineHeight:1 }}>{v.img}</div>
             <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:700 }}>{v.name}</div>
-              <div style={{ fontSize:11, color:"var(--color-text-secondary)", marginTop:2 }}>{v.var!=="—"?`${v.var} · `:""}{v.reason}</div>
-              <div style={{ fontSize:10, color:"var(--color-text-tertiary)", marginTop:1, fontFamily:"var(--font-mono)" }}>{k}{v.orderN?` · ${v.orderN}`:""}</div>
+              <div style={{ fontSize:13, fontWeight:700, color:T.text }}>{v.name}</div>
+              <div style={{ fontSize:11, color:T.text2, marginTop:2 }}>{v.var!=="—"?`${v.var} · `:""}{v.reason}</div>
+              <div style={{ fontSize:10, color:T.text3, marginTop:1, fontFamily:"monospace" }}>{k}{v.orderN?` · ${v.orderN}`:""}</div>
             </div>
-            {v.prev && <span style={{ fontSize:10, background:"#FDF3E3", color:"#92570A", border:"1px solid #EF9F27", borderRadius:10, padding:"2px 8px", flexShrink:0, fontWeight:700 }}>Prev</span>}
+            {v.prev && <span style={{ fontSize:10, background:T.amberBg, color:T.amberCol, border:`1px solid ${T.amberBr}`, borderRadius:10, padding:"2px 8px", flexShrink:0, fontWeight:700 }}>Prev</span>}
           </div>
         ))}
       </Card>
@@ -674,21 +769,21 @@ function TransferScreen({ rec, disp, onComplete, onSwitch }) {
   if (confirmed) return (
     <>
       <div style={{ textAlign:"center", padding:"40px 16px 28px" }}>
-        <div style={{ width:72, height:72, borderRadius:"50%", background:"#E6F5EE", border:"2.5px solid #0A6E4A", display:"flex", alignItems:"center", justifyContent:"center", fontSize:30, margin:"0 auto 18px", color:"#0A6E4A" }}>✓</div>
-        <div style={{ fontSize:24, fontWeight:800, marginBottom:6 }}>Item processed</div>
-        <div style={{ fontSize:14, color:"var(--color-text-secondary)", marginBottom:4 }}>{rec.name}</div>
-        <div style={{ fontSize:13, color:"var(--color-text-tertiary)" }}>Placed in {g.gid}</div>
+        <div style={{ width:72, height:72, borderRadius:"50%", background:T.greenBg, border:`2.5px solid ${T.greenCol}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:30, margin:"0 auto 18px", color:T.greenCol }}>✓</div>
+        <div style={{ fontSize:24, fontWeight:800, marginBottom:6, color:T.text }}>Item processed</div>
+        <div style={{ fontSize:14, color:T.text2, marginBottom:4 }}>{rec.name}</div>
+        <div style={{ fontSize:13, color:T.text3 }}>Placed in {g.gid}</div>
       </div>
-      <Card style={{ background:"var(--color-background-secondary)", marginBottom:16 }}>
+      <Card style={{ background:T.bg2, marginBottom:16 }}>
         {[["Product",rec.name],["SKU",rec.sku],["Disposition",g.label],["Gaylord",g.gid],["Location",g.loc],["Time",new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})]].map(([k,v]) => (
-          <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:"0.5px solid var(--color-border-tertiary)", fontSize:13 }}>
-            <span style={{ color:"var(--color-text-secondary)" }}>{k}</span>
-            <span style={{ fontWeight:700 }}>{v}</span>
+          <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:`0.5px solid ${T.border}`, fontSize:13 }}>
+            <span style={{ color:T.text2 }}>{k}</span>
+            <span style={{ fontWeight:700, color:T.text }}>{v}</span>
           </div>
         ))}
       </Card>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-        <Btn onClick={onComplete} col="#111" style={{ fontSize:15, padding:15 }}>Next item →</Btn>
+        <Btn onClick={onComplete} col={T.text} style={{ fontSize:15, padding:15 }}>Next item →</Btn>
         <Ghost onClick={onSwitch} style={{ fontSize:15, padding:15 }}>Switch program</Ghost>
       </div>
     </>
@@ -704,12 +799,12 @@ function TransferScreen({ rec, disp, onComplete, onSwitch }) {
         <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, color:g.col, marginBottom:6 }}><span style={{ fontWeight:600 }}>Fill level</span><span style={{ fontWeight:700 }}>{g.used}/{g.cap}</span></div>
         <div style={{ background:"rgba(0,0,0,0.08)", borderRadius:6, height:8 }}><div style={{ width:`${Math.round((g.used/g.cap)*100)}%`, height:8, borderRadius:6, background:g.col }}/></div>
       </Card>
-      <div onClick={()=>!scanned&&setTimeout(()=>setScanned(true),1000)} style={{ background:scanned?"#E6F5EE":"var(--color-background-secondary)", border:`2px dashed ${scanned?"#0A6E4A":"var(--color-border-secondary)"}`, borderRadius:16, padding:"32px 20px", textAlign:"center", cursor:scanned?"default":"pointer", marginBottom:16 }}>
+      <div onClick={()=>!scanned&&setTimeout(()=>setScanned(true),1000)} style={{ background:scanned?T.greenBg:T.bg2, border:`2px dashed ${scanned?T.greenCol:T.border2}`, borderRadius:16, padding:"32px 20px", textAlign:"center", cursor:scanned?"default":"pointer", marginBottom:16 }}>
         {scanned
-          ? <div><div style={{ fontSize:28, color:"#0A6E4A", marginBottom:6 }}>✓</div><div style={{ fontSize:15, fontWeight:700, color:"#0A6E4A" }}>Gaylord scanned</div><div style={{ fontSize:12, color:"#0A6E4A", marginTop:2, opacity:0.7 }}>{g.gid}</div></div>
-          : <div><div style={{ fontSize:40, color:"var(--color-text-tertiary)", marginBottom:8, lineHeight:1 }}>▣</div><div style={{ fontSize:14, color:"var(--color-text-secondary)", fontWeight:600 }}>Tap to scan Gaylord barcode</div></div>}
+          ? <div><div style={{ fontSize:28, color:T.greenCol, marginBottom:6 }}>✓</div><div style={{ fontSize:15, fontWeight:700, color:T.greenCol }}>Gaylord scanned</div><div style={{ fontSize:12, color:T.greenCol, marginTop:2, opacity:0.7 }}>{g.gid}</div></div>
+          : <div><div style={{ fontSize:40, color:T.text3, marginBottom:8, lineHeight:1 }}>▣</div><div style={{ fontSize:14, color:T.text2, fontWeight:600 }}>Tap to scan Gaylord barcode</div></div>}
       </div>
-      <Btn onClick={()=>setConfirmed(true)} disabled={!scanned} col="#0A6E4A" style={{ padding:17, fontSize:16 }}>✓ Confirm transfer</Btn>
+      <Btn onClick={()=>setConfirmed(true)} disabled={!scanned} col={T.greenCol} style={{ padding:17, fontSize:16 }}>✓ Confirm transfer</Btn>
     </>
   );
 }
@@ -794,15 +889,15 @@ function AssocDash({ stats }) {
       <SL>VAS work performed</SL>
       <Card>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-          <div style={{ textAlign:"center", background:"#EBF3FD", borderRadius:12, padding:"14px 10px" }}>
-            <div style={{ fontSize:32, fontWeight:800, color:"#185FA5" }}>{vasUnits}</div>
-            <div style={{ fontSize:13, fontWeight:700, color:"#185FA5", marginTop:2 }}>Items through VAS</div>
-            <div style={{ fontSize:11, color:"#185FA5", opacity:0.7, marginTop:2 }}>needed prep work</div>
+          <div style={{ textAlign:"center", background:T.blueBg, borderRadius:12, padding:"14px 10px" }}>
+            <div style={{ fontSize:32, fontWeight:800, color:T.blueCol }}>{vasUnits}</div>
+            <div style={{ fontSize:13, fontWeight:700, color:T.blueCol, marginTop:2 }}>Items through VAS</div>
+            <div style={{ fontSize:11, color:T.blueCol, opacity:0.7, marginTop:2 }}>needed prep work</div>
           </div>
-          <div style={{ textAlign:"center", background:"#F3F0FE", borderRadius:12, padding:"14px 10px" }}>
-            <div style={{ fontSize:32, fontWeight:800, color:"#4B3FC1" }}>{vas}</div>
-            <div style={{ fontSize:13, fontWeight:700, color:"#4B3FC1", marginTop:2 }}>VAS actions done</div>
-            <div style={{ fontSize:11, color:"#4B3FC1", opacity:0.7, marginTop:2 }}>rebag, retag, etc.</div>
+          <div style={{ textAlign:"center", background:T.purpleBg, borderRadius:12, padding:"14px 10px" }}>
+            <div style={{ fontSize:32, fontWeight:800, color:T.purpleCol }}>{vas}</div>
+            <div style={{ fontSize:13, fontWeight:700, color:T.purpleCol, marginTop:2 }}>VAS actions done</div>
+            <div style={{ fontSize:11, color:T.purpleCol, opacity:0.7, marginTop:2 }}>rebag, retag, etc.</div>
           </div>
         </div>
       </Card>
@@ -949,27 +1044,27 @@ function SupDash({ shift, log, excs, rmas, onUpload }) {
           )}
 
           <SL mt={shift.total>0?4:18}>Shared RMA queue</SL>
-          <Card style={{ border:"1px solid #B5D4F4", background:"#EBF3FD" }}>
+          <Card style={{ border:`1px solid ${T.blueBr}`, background:T.blueBg }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
               <div>
-                <div style={{ fontSize:15, fontWeight:700, color:"#185FA5" }}>Shift queue</div>
-                <div style={{ fontSize:12, color:"#185FA5", opacity:0.8, marginTop:2 }}>Visible to all associates</div>
+                <div style={{ fontSize:15, fontWeight:700, color:T.blueCol }}>Shift queue</div>
+                <div style={{ fontSize:12, color:T.blueCol, opacity:0.8, marginTop:2 }}>Visible to all associates</div>
               </div>
-              <div style={{ fontSize:28, fontWeight:800, color:"#185FA5" }}>{Object.keys(rmas).length}</div>
+              <div style={{ fontSize:28, fontWeight:800, color:T.blueCol }}>{Object.keys(rmas).length}</div>
             </div>
             {Object.entries(MERCHANTS).map(([id,m]) => {
               const ct = Object.values(rmas).filter(r=>r.mer===id).length;
               return (
-                <div key={id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderTop:"0.5px solid #B5D4F4" }}>
+                <div key={id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 0", borderTop:`0.5px solid ${T.blueBr}` }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                    <div style={{ width:6, height:6, borderRadius:"50%", background:ct>0?m.col:"#B5D4F4" }}/>
-                    <span style={{ fontSize:13, fontWeight:600, color:"#185FA5" }}>{m.name}</span>
+                    <div style={{ width:6, height:6, borderRadius:"50%", background:ct>0?m.col:T.blueBr }}/>
+                    <span style={{ fontSize:13, fontWeight:600, color:T.blueCol }}>{m.name}</span>
                   </div>
-                  <span style={{ fontSize:13, fontWeight:700, color:"#185FA5" }}>{ct} item{ct!==1?"s":""}</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:T.blueCol }}>{ct} item{ct!==1?"s":""}</span>
                 </div>
               );
             })}
-            <button onClick={onUpload} style={{ marginTop:12, width:"100%", padding:"10px", borderRadius:10, border:"1px solid #185FA5", background:"#fff", color:"#185FA5", fontSize:13, fontWeight:700, cursor:"pointer" }}>
+            <button onClick={onUpload} style={{ marginTop:12, width:"100%", padding:"10px", borderRadius:10, border:`1px solid ${T.blueCol}`, background:T.bg, color:T.blueCol, fontSize:13, fontWeight:700, cursor:"pointer" }}>
               ↑ Load RMA file for today's shift
             </button>
           </Card>
@@ -986,16 +1081,16 @@ function SupDash({ shift, log, excs, rmas, onUpload }) {
             <>
               <SL>Exceptions pending review</SL>
               {excs.map((e,i) => (
-                <Card key={i} style={{ border:"1px solid #EF9F27", background:"#FDF3E3" }}>
+                <Card key={i} style={{ border:`1px solid ${T.amberBr}`, background:T.amberBg }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
                     <div>
-                      <div style={{ fontSize:13, fontWeight:700, color:"#92570A" }}>{e.rmaId}</div>
-                      <div style={{ fontSize:12, color:"#92570A", marginTop:2 }}>{e.name} · {e.reason}</div>
-                      <div style={{ fontSize:11, color:"#92570A", marginTop:2, opacity:0.7 }}>By {e.assoc} · {e.ts}</div>
+                      <div style={{ fontSize:13, fontWeight:700, color:T.amberCol }}>{e.rmaId}</div>
+                      <div style={{ fontSize:12, color:T.amberCol, marginTop:2 }}>{e.name} · {e.reason}</div>
+                      <div style={{ fontSize:11, color:T.amberCol, marginTop:2, opacity:0.7 }}>By {e.assoc} · {e.ts}</div>
                     </div>
                     {e.photo && <img src={e.photo} alt="" style={{ width:48, height:48, borderRadius:8, objectFit:"cover" }}/>}
                   </div>
-                  {e.notes && <div style={{ marginTop:8, fontSize:12, color:"#92570A", background:"rgba(255,255,255,0.6)", borderRadius:8, padding:"6px 10px" }}>{e.notes}</div>}
+                  {e.notes && <div style={{ marginTop:8, fontSize:12, color:T.amberCol, background:"rgba(255,255,255,0.1)", borderRadius:8, padding:"6px 10px" }}>{e.notes}</div>}
                 </Card>
               ))}
             </>
@@ -1008,33 +1103,34 @@ function SupDash({ shift, log, excs, rmas, onUpload }) {
           {liveAssocs.length === 0 && (
             <Card style={{ textAlign:"center", padding:"32px 20px" }}>
               <div style={{ fontSize:32, marginBottom:12 }}>👋</div>
-              <div style={{ fontSize:15, fontWeight:700, marginBottom:6 }}>No associates on shift yet</div>
-              <div style={{ fontSize:13, color:"var(--color-text-secondary)" }}>Associates will appear here once they log in and process items.</div>
+              <div style={{ fontSize:15, fontWeight:700, marginBottom:6, color:T.text }}>No associates on shift yet</div>
+              <div style={{ fontSize:13, color:T.text2 }}>Associates will appear here once they log in and process items.</div>
             </Card>
           )}
           {liveAssocs.map(a => {
             const p   = a.tgt > 0 ? Math.round((a.n / a.tgt) * 100) : 0;
             const tot = Object.values(a.gr).reduce((s,v)=>s+v, 0);
+            const barCol = p>=80?T.greenCol:p>=50?T.amberCol:T.redCol;
             return (
               <Card key={a.id}>
                 <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
                   <Av ini={a.ini} sz={42}/>
                   <div style={{ flex:1 }}>
-                    <div style={{ fontWeight:700, fontSize:15 }}>{a.name}</div>
-                    <div style={{ fontSize:12, color:"var(--color-text-secondary)", marginTop:1 }}>{a.id} · {a.vas} VAS actions</div>
+                    <div style={{ fontWeight:700, fontSize:15, color:T.text }}>{a.name}</div>
+                    <div style={{ fontSize:12, color:T.text2, marginTop:1 }}>{a.id} · {a.vas} VAS actions</div>
                   </div>
                   <div style={{ textAlign:"right" }}>
-                    <div style={{ fontSize:24, fontWeight:800, color:p>=80?"#0A6E4A":p>=50?"#92570A":"#991B1B" }}>{a.n}</div>
-                    <div style={{ fontSize:11, color:"var(--color-text-tertiary)" }}>of {a.tgt}</div>
+                    <div style={{ fontSize:24, fontWeight:800, color:barCol }}>{a.n}</div>
+                    <div style={{ fontSize:11, color:T.text3 }}>of {a.tgt}</div>
                   </div>
                 </div>
-                <MiniBar val={a.n} max={a.tgt} col={p>=80?"#0A6E4A":p>=50?"#92570A":"#991B1B"} h={8}/>
+                <MiniBar val={a.n} max={a.tgt} col={barCol} h={8}/>
                 <div style={{ display:"flex", gap:6, marginTop:12 }}>
                   {Object.entries(a.gr).map(([g,n]) => (
-                    <div key={g} style={{ flex:1, background:GB[g], border:`1px solid ${GC[g]}22`, borderRadius:9, padding:"8px 4px", textAlign:"center" }}>
+                    <div key={g} style={{ flex:1, background:GB[g], border:`1px solid ${GC[g]}44`, borderRadius:9, padding:"8px 4px", textAlign:"center" }}>
                       <div style={{ fontSize:12, fontWeight:800, color:GC[g] }}>{g}</div>
                       <div style={{ fontSize:16, fontWeight:700, color:GC[g] }}>{n}</div>
-                      <div style={{ fontSize:9, fontWeight:700, color:GC[g], opacity:0.7 }}>{tot>0?Math.round((n/tot)*100):0}%</div>
+                      <div style={{ fontSize:9, fontWeight:700, color:GC[g], opacity:0.8 }}>{tot>0?Math.round((n/tot)*100):0}%</div>
                     </div>
                   ))}
                 </div>
@@ -1090,14 +1186,14 @@ function SupDash({ shift, log, excs, rmas, onUpload }) {
               <div style={{ fontSize:13, color:r.col, fontWeight:700 }}>↓ CSV</div>
             </Card>
           ))}
-          <Card style={{ background:"var(--color-background-secondary)", marginTop:8 }}>
+          <Card style={{ background:T.bg2, marginTop:8 }}>
             <SL mt={0}>Recent activity</SL>
-            {log.length===0 && <div style={{ fontSize:12, color:"var(--color-text-tertiary)" }}>No items processed yet this shift</div>}
+            {log.length===0 && <div style={{ fontSize:12, color:T.text3 }}>No items processed yet this shift</div>}
             {log.slice(-8).reverse().map((e,i) => (
-              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:"0.5px solid var(--color-border-tertiary)", fontSize:12 }}>
-                <span style={{ color:"var(--color-text-secondary)", fontFamily:"var(--font-mono)", fontSize:11 }}>{e.rmaId}</span>
-                <Tag col={e.disp==="restock"?"#0A6E4A":e.disp==="donate"?"#92570A":"#991B1B"} bg={e.disp==="restock"?"#E6F5EE":e.disp==="donate"?"#FDF3E3":"#FEF2F2"} br={e.disp==="restock"?"#5DCAA5":e.disp==="donate"?"#EF9F27":"#F09595"}>{e.disp||"exception"}</Tag>
-                <span style={{ color:"var(--color-text-tertiary)" }}>{e.assoc}</span>
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:`0.5px solid ${T.border}`, fontSize:12 }}>
+                <span style={{ color:T.text2, fontFamily:"monospace", fontSize:11 }}>{e.rmaId}</span>
+                <Tag col={e.disp==="restock"?T.greenCol:e.disp==="donate"?T.amberCol:T.redCol} bg={e.disp==="restock"?T.greenBg:e.disp==="donate"?T.amberBg:T.redBg} br={e.disp==="restock"?T.greenBr:e.disp==="donate"?T.amberBr:T.redBr}>{e.disp||"exception"}</Tag>
+                <span style={{ color:T.text3 }}>{e.assoc}</span>
               </div>
             ))}
           </Card>
@@ -1214,12 +1310,15 @@ export default function App() {
     setAstats(null); setLog([]); setExcs([]); setKey(k=>k+1);
   };
 
-  if (!user) return <QRLogin key={key} onLogin={login}/>;
+  if (!user) return <><GlobalStyles/><QRLogin key={key} onLogin={login}/></>;
   return (
-    <Shell user={user} mode={mode} onMode={setMode} onLogout={logout} onReset={resetAll}>
-      {user.role==="supervisor" && <SupDashWrapper shift={shift} log={log} excs={excs} rmas={rmas} onUpload={r=>setRmas(p=>({...p,...r}))}/>}
-      {user.role==="associate"  && mode==="process" && <ProcFlow key={`f-${key}`} user={user} rmas={rmas} onDone={onDone} onUpload={r=>setRmas(p=>({...p,...r}))}/>}
-      {user.role==="associate"  && mode==="stats"   && astats && <AssocDash stats={astats}/>}
-    </Shell>
+    <>
+      <GlobalStyles/>
+      <Shell user={user} mode={mode} onMode={setMode} onLogout={logout} onReset={resetAll}>
+        {user.role==="supervisor" && <SupDashWrapper shift={shift} log={log} excs={excs} rmas={rmas} onUpload={r=>setRmas(p=>({...p,...r}))}/>}
+        {user.role==="associate"  && mode==="process" && <ProcFlow key={`f-${key}`} user={user} rmas={rmas} onDone={onDone} onUpload={r=>setRmas(p=>({...p,...r}))}/>}
+        {user.role==="associate"  && mode==="stats"   && astats && <AssocDash stats={astats}/>}
+      </Shell>
+    </>
   );
 }
