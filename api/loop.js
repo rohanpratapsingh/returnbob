@@ -12,39 +12,43 @@ export default async function handler(req, res) {
 
   const { endpoint = "returns" } = req.query;
 
-  const ENDPOINTS = {
-    returns: `https://api.loopreturns.com/api/v1/warehouse/return`,
-    list:    `https://api.loopreturns.com/api/v1/return`,
-  };
-
-  const baseUrl = ENDPOINTS[endpoint];
-  if (!baseUrl) {
-    return res.status(400).json({ error: `Unknown endpoint: ${endpoint}` });
-  }
-
   try {
-    const params = new URLSearchParams();
-    if (req.query.page)  params.set("page",  req.query.page);
-    if (req.query.limit) params.set("limit", req.query.limit);
-    const fullUrl = params.toString() ? `${baseUrl}?${params}` : baseUrl;
+    let fullUrl, method, body;
 
-    const sbRes = await fetch(fullUrl, {
-      method: "GET",
-      headers: {
-        "X-Authorization": apiKey.trim(),
-        "x-loop-shop":     domain.trim(),
-        "Content-Type":    "application/json",
-        "Accept":          "application/json",
-      },
-    });
+    if (endpoint === "returns") {
+      // Loop warehouse returns requires POST with pagination in body
+      fullUrl = "https://api.loopreturns.com/api/v1/warehouse/return";
+      method  = "POST";
+      const page  = parseInt(req.query.page  || "1");
+      const limit = parseInt(req.query.limit || "50");
+      body = JSON.stringify({ page, limit });
+    } else if (endpoint === "list") {
+      // Regular returns list uses GET
+      fullUrl = "https://api.loopreturns.com/api/v1/return";
+      method  = "GET";
+    } else {
+      return res.status(400).json({ error: `Unknown endpoint: ${endpoint}` });
+    }
 
-    const text = await sbRes.text();
+    const headers = {
+      "X-Authorization": apiKey.trim(),
+      "x-loop-shop":     domain.trim(),
+      "Content-Type":    "application/json",
+      "Accept":          "application/json",
+    };
 
-    if (!sbRes.ok) {
-      return res.status(sbRes.status).json({
+    const fetchOpts = { method, headers };
+    if (body) fetchOpts.body = body;
+
+    const loopRes = await fetch(fullUrl, fetchOpts);
+    const text    = await loopRes.text();
+
+    if (!loopRes.ok) {
+      return res.status(loopRes.status).json({
         error:   "Loop API error",
-        status:  sbRes.status,
+        status:  loopRes.status,
         url:     fullUrl,
+        method,
         details: text,
         debug: {
           domain,
