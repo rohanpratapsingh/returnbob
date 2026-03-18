@@ -137,39 +137,51 @@ const ensureMerchant = (id, name) => {
 const SB_PROXY = "/api/shipbob";
 
 // Map a ShipBob return object → ReturnBob RMA shape
+// Field names confirmed from live API response
 const sbReturnToRMA = (ret) => {
-  // Derive merchant ID from ShipBob's merchant/channel name
-  const rawName = (ret.merchant_name || ret.channel_name || ret.reference_id || "").toLowerCase();
-  let merId = "TC"; // fallback
-  if      (rawName.includes("hommey"))                               merId = "HM";
-  else if (rawName.includes("true classic")||rawName.includes("tc")) merId = "TC";
-  else if (ret.merchant_id) {
-    // Use merchant_id as key, normalise to uppercase alphanum
-    merId = String(ret.merchant_id).toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
-  }
-  // Auto-register if new
-  ensureMerchant(merId, ret.merchant_name || ret.channel_name || merId);
+  // Merchant comes from channel.name in ShipBob sandbox
+  const channelName = (ret.channel?.name || "").toLowerCase();
+  const refId       = (ret.reference_id || "").toLowerCase();
 
-  const item    = ret.inventory_items?.[0] || {};
-  const sku     = item.sku || ret.sku || "—";
-  const name    = item.name || ret.product_name || sku || "ShipBob item";
-  const reason  = ret.return_reason || ret.reason || "Not specified";
-  const orderId = ret.original_order_id || ret.order_id || "";
+  let merId = "TC"; // fallback
+  if      (channelName.includes("hommey") || refId.includes("hommey")) merId = "HM";
+  else if (channelName.includes("true classic") || refId.includes("tc")) merId = "TC";
+  else if (ret.channel?.id) {
+    // Use channel ID as a stable merchant key
+    merId = `CH${ret.channel.id}`;
+  }
+
+  // Auto-register dynamic merchant if not known
+  const merName = ret.channel?.name || merId;
+  ensureMerchant(merId, merName);
+
+  // inventory array holds the actual items
+  const inv     = ret.inventory || [];
+  const item    = inv[0] || {};
+  const name    = item.name || "ShipBob return";
+  const sku     = String(item.id || "—"); // ShipBob inventory ID as SKU
+  const qty     = String(inv.reduce((s, i) => s + (i.quantity || 1), 0) || 1);
+
+  // action_requested.action tells us what ShipBob wants done (Restock/Donate/Dispose)
+  const action  = item.action_requested?.action || "";
+  const reason  = `${ret.return_type || "Return"} — ${action || ret.status || "Pending"}`;
 
   return {
-    id:       String(ret.id || ret.return_id || `sb-${Date.now()}`),
-    mer:      merId,
+    id:      String(ret.id),
+    mer:     merId,
     sku,
     name,
-    var:      item.size || item.variant || "—",
+    var:     ret.fulfillment_center?.name || "—",
     reason,
-    qty:      String(ret.quantity || item.quantity || 1),
-    orderN:   String(orderId),
-    labelBC:  ret.tracking_number || "",
-    bagBC:    "",
-    prev:     false,
-    img:      "📦",
-    fromSB:   true,
+    qty,
+    orderN:  ret.reference_id || "",
+    labelBC: ret.tracking_number || "",
+    bagBC:   "",
+    prev:    false,
+    img:     "📦",
+    fromSB:  true,
+    sbStatus: ret.status || "",
+    sbAction: action,
   };
 };
 
