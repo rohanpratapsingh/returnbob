@@ -98,9 +98,101 @@ const T = {
 };
 
 // ── DATA ───────────────────────────────────────────────────
-const MERCHANTS = {
+
+// Branded merchants — TC and HM always present with full theming
+const BRANDED_MERCHANTS = {
   TC: { name:"True Classic",  tagline:"Premium basics",      col:T.tcCol,  bg:T.tcBg,  br:T.tcBr,  dk:T.tcDk  },
   HM: { name:"Hommey",        tagline:"Comfort home goods",  col:T.hmCol,  bg:T.hmBg,  br:T.hmBr,  dk:T.hmDk  },
+};
+
+// Palette for auto-generated dynamic merchants
+const DYN_PALETTES = [
+  { col:"#7C3AED", bg:"#F5F3FF", br:"#C4B5FD", dk:"#5B21B6" },
+  { col:"#0891B2", bg:"#ECFEFF", br:"#67E8F9", dk:"#0E7490" },
+  { col:"#D97706", bg:"#FFFBEB", br:"#FCD34D", dk:"#B45309" },
+  { col:"#BE185D", bg:"#FDF2F8", br:"#F9A8D4", dk:"#9D174D" },
+  { col:"#059669", bg:"#ECFDF5", br:"#6EE7B7", dk:"#047857" },
+  { col:"#DC2626", bg:"#FEF2F2", br:"#FCA5A5", dk:"#B91C1C" },
+];
+
+// Runtime merchant registry — starts with branded, grows dynamically
+let MERCHANTS = { ...BRANDED_MERCHANTS };
+
+// Ensure a merchant exists in registry, auto-creating if unknown
+const ensureMerchant = (id, name) => {
+  if (MERCHANTS[id]) return MERCHANTS[id];
+  const idx = Object.keys(MERCHANTS).length % DYN_PALETTES.length;
+  const pal = DYN_PALETTES[idx];
+  const abbr = id.slice(0, 2).toUpperCase();
+  MERCHANTS[id] = {
+    name:    name || id,
+    tagline: "ShipBob merchant",
+    col: pal.col, bg: pal.bg, br: pal.br, dk: pal.dk,
+    dynamic: true,
+  };
+  return MERCHANTS[id];
+};
+
+// ── SHIPBOB API ────────────────────────────────────────────
+const SB_PROXY = "/api/shipbob";
+
+// Map a ShipBob return object → ReturnBob RMA shape
+const sbReturnToRMA = (ret) => {
+  // Derive merchant ID from ShipBob's merchant/channel name
+  const rawName = (ret.merchant_name || ret.channel_name || ret.reference_id || "").toLowerCase();
+  let merId = "TC"; // fallback
+  if      (rawName.includes("hommey"))                               merId = "HM";
+  else if (rawName.includes("true classic")||rawName.includes("tc")) merId = "TC";
+  else if (ret.merchant_id) {
+    // Use merchant_id as key, normalise to uppercase alphanum
+    merId = String(ret.merchant_id).toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
+  }
+  // Auto-register if new
+  ensureMerchant(merId, ret.merchant_name || ret.channel_name || merId);
+
+  const item    = ret.inventory_items?.[0] || {};
+  const sku     = item.sku || ret.sku || "—";
+  const name    = item.name || ret.product_name || sku || "ShipBob item";
+  const reason  = ret.return_reason || ret.reason || "Not specified";
+  const orderId = ret.original_order_id || ret.order_id || "";
+
+  return {
+    id:       String(ret.id || ret.return_id || `sb-${Date.now()}`),
+    mer:      merId,
+    sku,
+    name,
+    var:      item.size || item.variant || "—",
+    reason,
+    qty:      String(ret.quantity || item.quantity || 1),
+    orderN:   String(orderId),
+    labelBC:  ret.tracking_number || "",
+    bagBC:    "",
+    prev:     false,
+    img:      "📦",
+    fromSB:   true,
+  };
+};
+
+// Fetch all returns from ShipBob via proxy, paginating if needed
+const fetchSBReturns = async () => {
+  const results = [];
+  let page = 1;
+  const limit = 50;
+  while (true) {
+    const res = await fetch(`${SB_PROXY}?endpoint=returns&page=${page}&limit=${limit}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.details || err.error || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    // ShipBob may return array directly or wrapped in { data: [] } or { items: [] }
+    const items = Array.isArray(data) ? data : (data.data || data.items || data.returns || []);
+    results.push(...items);
+    // Stop if we got fewer than a full page
+    if (items.length < limit) break;
+    page++;
+  }
+  return results;
 };
 const USERS = {
   "QR-A01": { name:"Marcus R.", ini:"MR", role:"associate",  id:"A01", mer:"TC" },
@@ -137,7 +229,7 @@ const HOURS = ["7a","8a","9a","10a","11a","12p","1p","2p","3p","4p"];
 const makeEmptyShift = () => ({
   total: 0,
   tgt: 360,
-  assocs: [],          // populated dynamically as associates log in & work
+  assocs: [],
   hourly: new Array(HOURS.length).fill(0),
   hours: HOURS,
   mers: Object.keys(MERCHANTS).map(id => ({ id, name: MERCHANTS[id].name, n:0, rs:0, dn:0, dp:0 })),
@@ -283,11 +375,40 @@ function ExcFlag({ onClick }) {
 
 // ── UPLOAD SCREEN ──────────────────────────────────────────
 function UploadScreen({ rmas, onUpload, onBack }) {
-  const [preview, setPreview] = useState(null);
-  const [drag,    setDrag]    = useState(false);
-  const [err,     setErr]     = useState(null);
-  const [result,  setResult]  = useState(null);
+  const [preview,  setPreview]  = useState(null);
+  const [drag,     setDrag]     = useState(false);
+  const [err,      setErr]      = useState(null);
+  const [result,   setResult]   = useState(null);
+  const [sbStatus, setSbStatus] = useState("idle");
+  const [sbMsg,    setSbMsg]    = useState("");
   const fileRef = useRef();
+
+  const syncShipBob = async () => {
+    setSbStatus("loading"); setSbMsg(""); setErr(null); setResult(null);
+    try {
+      const raw = await fetchSBReturns();
+      if (!raw.length) {
+        setSbStatus("error");
+        setSbMsg("No returns found in ShipBob. Check your account has active returns.");
+        return;
+      }
+      const newRMAs = {};
+      const newMers = new Set();
+      raw.forEach(ret => {
+        const rma = sbReturnToRMA(ret);
+        newRMAs[rma.id] = rma;
+        newMers.add(rma.mer);
+      });
+      const loaded = Object.keys(newRMAs).length;
+      onUpload(newRMAs, [...newMers]);
+      setSbStatus("success");
+      setSbMsg(`✓ ${loaded} return${loaded !== 1 ? "s" : ""} synced from ShipBob across ${newMers.size} merchant${newMers.size !== 1 ? "s" : ""}`);
+    } catch (e) {
+      setSbStatus("error");
+      setSbMsg(e.message || "Could not connect to ShipBob");
+    }
+  };
+
   const handle = file => {
     if (!file) return;
     const reader = new FileReader();
@@ -311,27 +432,68 @@ function UploadScreen({ rmas, onUpload, onBack }) {
       newRMAs[m.id] = m;
     });
     setResult({ total:preview.length, loaded:Object.keys(newRMAs).length, dupes });
-    onUpload(newRMAs); setPreview(null);
+    onUpload(newRMAs, []); setPreview(null);
   };
   const SAMPLE = [
     {"po #":"PO-10042","outbound shipment id":"SHP-88821","name":"Classic Crew Tee","sku":"TC-CREW-GRY-M","label barcode":"LBL-TC-0042","return bag barcode":"BAG-TC-9921","order number":"ORD-20948","return reason":"Too small","quantity":"1","return previously reported":"false"},
     {"po #":"PO-10043","outbound shipment id":"SHP-88822","name":"Cloud Slipper","sku":"HM-SLIPPER-BLK-8","label barcode":"LBL-HM-0031","return bag barcode":"BAG-HM-0041","order number":"ORD-20949","return reason":"Colour not as expected","quantity":"1","return previously reported":"false"},
   ];
+
   return (
     <div style={{ minHeight:"100vh", background:T.bg3 }}>
       <div style={{ background:T.bg, borderBottom:`1px solid ${T.border}`, padding:"14px 20px", display:"flex", alignItems:"center", gap:14 }}>
         <button onClick={onBack} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:T.text2, lineHeight:1 }}>‹</button>
-        <div><div style={{ fontSize:16, fontWeight:700, color:T.text }}>Upload RMA file</div><div style={{ fontSize:12, color:T.text2, marginTop:1 }}>Shared queue — visible to all associates</div></div>
+        <div><div style={{ fontSize:16, fontWeight:700, color:T.text }}>Load returns</div><div style={{ fontSize:12, color:T.text2, marginTop:1 }}>Sync from ShipBob or upload a CSV</div></div>
       </div>
       <div style={{ padding:16, maxWidth:560, margin:"0 auto" }}>
+
+        <Card style={{ border:`1.5px solid ${T.blueBr}`, background:T.blueBg, marginBottom:16 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
+            <div style={{ width:44, height:44, borderRadius:12, background:T.bg, border:`1px solid ${T.blueBr}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>📦</div>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:T.blueCol }}>Sync from ShipBob</div>
+              <div style={{ fontSize:12, color:T.blueCol, opacity:0.8, marginTop:2 }}>Pulls all active returns — any merchant</div>
+            </div>
+          </div>
+          {sbStatus === "idle" && (
+            <Btn onClick={syncShipBob} col={T.blueCol} style={{ fontSize:14, padding:"13px" }}>↻ Sync returns from ShipBob now</Btn>
+          )}
+          {sbStatus === "loading" && (
+            <div style={{ textAlign:"center", padding:"14px 0" }}>
+              <div style={{ fontSize:13, color:T.blueCol, fontWeight:600 }}>Fetching from ShipBob…</div>
+              <div style={{ fontSize:11, color:T.blueCol, opacity:0.7, marginTop:4 }}>This may take a few seconds</div>
+            </div>
+          )}
+          {sbStatus === "success" && (
+            <div style={{ background:T.greenBg, border:`1px solid ${T.greenBr}`, borderRadius:10, padding:"12px 14px" }}>
+              <div style={{ fontSize:13, fontWeight:700, color:T.greenCol }}>{sbMsg}</div>
+              <button onClick={()=>{setSbStatus("idle");setSbMsg("");}} style={{ marginTop:8, fontSize:12, color:T.blueCol, background:"none", border:"none", cursor:"pointer", padding:0 }}>Sync again</button>
+            </div>
+          )}
+          {sbStatus === "error" && (
+            <div style={{ background:T.redBg, border:`1px solid ${T.redBr}`, borderRadius:10, padding:"12px 14px" }}>
+              <div style={{ fontSize:13, fontWeight:700, color:T.redCol }}>⚠ {sbMsg}</div>
+              <button onClick={()=>{setSbStatus("idle");setSbMsg("");}} style={{ marginTop:8, fontSize:12, color:T.blueCol, background:"none", border:"none", cursor:"pointer", padding:0 }}>Try again</button>
+            </div>
+          )}
+        </Card>
+
+        <div style={{ display:"flex", alignItems:"center", gap:10, margin:"18px 0" }}>
+          <div style={{ flex:1, height:1, background:T.border }}/>
+          <div style={{ fontSize:11, color:T.text3, fontWeight:600 }}>or upload a CSV file manually</div>
+          <div style={{ flex:1, height:1, background:T.border }}/>
+        </div>
+
         <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={e=>handle(e.target.files[0])} style={{ display:"none" }}/>
         <div onDragOver={e=>{e.preventDefault();setDrag(true);}} onDragLeave={()=>setDrag(false)} onDrop={e=>{e.preventDefault();setDrag(false);handle(e.dataTransfer.files[0]);}} onClick={()=>fileRef.current.click()}
-          style={{ border:`2px dashed ${drag?T.blueCol:T.border2}`, background:drag?T.blueBg:T.bg2, borderRadius:16, padding:"44px 20px", textAlign:"center", cursor:"pointer", marginBottom:14 }}>
-          <div style={{ fontSize:36, marginBottom:10 }}>📂</div>
-          <div style={{ fontSize:15, fontWeight:700, marginBottom:4, color:T.text }}>Tap to select file</div>
-          <div style={{ fontSize:13, color:T.text2 }}>CSV · TSV · Excel</div>
+          style={{ border:`2px dashed ${drag?T.blueCol:T.border2}`, background:drag?T.blueBg:T.bg2, borderRadius:16, padding:"36px 20px", textAlign:"center", cursor:"pointer", marginBottom:14 }}>
+          <div style={{ fontSize:30, marginBottom:8 }}>📂</div>
+          <div style={{ fontSize:14, fontWeight:700, marginBottom:4, color:T.text }}>Tap to select CSV file</div>
+          <div style={{ fontSize:12, color:T.text2 }}>CSV · TSV · Excel</div>
         </div>
+
         {err && <div style={{ background:T.redBg, border:`1px solid ${T.redBr}`, borderRadius:10, padding:"10px 14px", fontSize:13, color:T.redCol, marginBottom:12 }}>{err}</div>}
+
         {result && (
           <Card style={{ background:result.loaded===result.total?T.greenBg:T.amberBg, border:`1px solid ${result.loaded===result.total?T.greenBr:T.amberBr}`, marginBottom:16 }}>
             <div style={{ fontSize:14, fontWeight:700, color:result.loaded===result.total?T.greenCol:T.amberCol, marginBottom:10 }}>{result.loaded===result.total?"✓":"⚠"} {result.loaded} of {result.total} rows loaded</div>
@@ -346,6 +508,7 @@ function UploadScreen({ rmas, onUpload, onBack }) {
             {result.dupes>0 && <div style={{ marginTop:10, fontSize:12, color:T.amberCol }}>Duplicate IDs auto-fixed — all rows loaded.</div>}
           </Card>
         )}
+
         {preview && (
           <>
             <Card style={{ background:T.greenBg, border:`1px solid ${T.greenBr}`, marginBottom:12 }}>
@@ -372,23 +535,36 @@ function UploadScreen({ rmas, onUpload, onBack }) {
             <Ghost onClick={()=>setPreview(null)}>Cancel</Ghost>
           </>
         )}
+
         {!preview && !result && (
           <>
-            <div style={{ textAlign:"center", margin:"16px 0 10px", fontSize:12, color:T.text3 }}>— or download a sample template —</div>
+            <div style={{ textAlign:"center", margin:"8px 0 10px", fontSize:12, color:T.text3 }}>— or download a sample template —</div>
             <Ghost onClick={()=>dlCSV("returnbob_template.csv", SAMPLE)}>↓ Download CSV template</Ghost>
           </>
         )}
+
         <Card style={{ background:T.bg2, marginTop:20 }}>
           <SL mt={0}>Current queue · {Object.keys(rmas).length} items</SL>
           {Object.entries(MERCHANTS).map(([id,m]) => {
             const ct = Object.values(rmas).filter(r=>r.mer===id).length;
-            return <div key={id} style={{ display:"flex", justifyContent:"space-between", padding:"5px 0", borderBottom:`0.5px solid ${T.border}`, fontSize:13 }}><span style={{ color:T.text2 }}>{m.name}</span><span style={{ fontWeight:700, color:T.text }}>{ct} items</span></div>;
+            if (ct === 0 && m.dynamic) return null;
+            return (
+              <div key={id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"5px 0", borderBottom:`0.5px solid ${T.border}`, fontSize:13 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <div style={{ width:6, height:6, borderRadius:"50%", background:ct>0?m.col:T.border2 }}/>
+                  <span style={{ color:T.text2 }}>{m.name}</span>
+                  {m.dynamic && <span style={{ fontSize:10, background:T.grayBg, color:T.grayCol, border:`1px solid ${T.grayBr}`, borderRadius:10, padding:"1px 6px" }}>ShipBob</span>}
+                </div>
+                <span style={{ fontWeight:700, color:T.text }}>{ct} items</span>
+              </div>
+            );
           })}
         </Card>
       </div>
     </div>
   );
 }
+
 
 // ── EXCEPTION SCREEN ───────────────────────────────────────
 function ExcScreen({ rmaId, onSave, onClose }) {
@@ -1316,8 +1492,27 @@ export default function App() {
     <>
       <GlobalStyles/>
       <Shell user={user} mode={mode} onMode={setMode} onLogout={logout} onReset={resetAll}>
-        {user.role==="supervisor" && <SupDashWrapper shift={shift} log={log} excs={excs} rmas={rmas} onUpload={r=>setRmas(p=>({...p,...r}))}/>}
-        {user.role==="associate"  && mode==="process" && <ProcFlow key={`f-${key}`} user={user} rmas={rmas} onDone={onDone} onUpload={r=>setRmas(p=>({...p,...r}))}/>}
+        {user.role==="supervisor" && <SupDashWrapper shift={shift} log={log} excs={excs} rmas={rmas} onUpload={(r, newMerIds=[])=>{
+        // Register any new dynamic merchants into shift.mers
+        if (newMerIds.length) {
+          setShift(p => {
+            const existing = new Set(p.mers.map(m=>m.id));
+            const extras = newMerIds.filter(id=>!existing.has(id)).map(id=>({ id, name:MERCHANTS[id]?.name||id, n:0, rs:0, dn:0, dp:0 }));
+            return extras.length ? { ...p, mers:[...p.mers, ...extras] } : p;
+          });
+        }
+        setRmas(p=>({...p,...r}));
+      }}/>}
+        {user.role==="associate"  && mode==="process" && <ProcFlow key={`f-${key}`} user={user} rmas={rmas} onDone={onDone} onUpload={(r, newMerIds=[])=>{
+        if (newMerIds.length) {
+          setShift(p => {
+            const existing = new Set(p.mers.map(m=>m.id));
+            const extras = newMerIds.filter(id=>!existing.has(id)).map(id=>({ id, name:MERCHANTS[id]?.name||id, n:0, rs:0, dn:0, dp:0 }));
+            return extras.length ? { ...p, mers:[...p.mers, ...extras] } : p;
+          });
+        }
+        setRmas(p=>({...p,...r}));
+      }}/>}
         {user.role==="associate"  && mode==="stats"   && astats && <AssocDash stats={astats}/>}
       </Shell>
     </>
