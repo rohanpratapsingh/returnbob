@@ -1035,7 +1035,7 @@ function ProcFlow({ user, rmas, onDone, onUpload }) {
   const handleComplete = d => { onDone(d,rmaId,null,cond?.grade,vs.map(s=>s.id)); toScan(); };
   const handleSwitch   = d => { onDone(d,rmaId,null,cond?.grade,vs.map(s=>s.id)); toMer(); };
 
-  if (showUp)  return <UploadScreen rmas={rmas} onUpload={r=>{onUpload(r);setShowUp(false);}} onBack={()=>setShowUp(false)}/>;
+  if (showUp)  return <UploadScreen rmas={rmas} onUpload={(r, newMerIds)=>{onUpload(r, newMerIds||[]);setShowUp(false);}} onBack={()=>setShowUp(false)}/>;
   if (showExc) return <ExcScreen rmaId={rmaId} onSave={onExcSave} onClose={()=>setShowExc(false)}/>;
 
   return (
@@ -1406,7 +1406,7 @@ function SupDash({ shift, log, excs, rmas, onUpload }) {
 // ── SUP WRAPPER ────────────────────────────────────────────
 function SupDashWrapper({ shift, log, excs, rmas, onUpload }) {
   const [showUp, setShowUp] = useState(false);
-  if (showUp) return <UploadScreen rmas={rmas} onUpload={r=>{ onUpload(r); setShowUp(false); }} onBack={()=>setShowUp(false)}/>;
+  if (showUp) return <UploadScreen rmas={rmas} onUpload={(r, newMerIds)=>{ onUpload(r, newMerIds||[]); setShowUp(false); }} onBack={()=>setShowUp(false)}/>;
   return <SupDash shift={shift} log={log} excs={excs} rmas={rmas} onUpload={()=>setShowUp(true)}/>;
 }
 
