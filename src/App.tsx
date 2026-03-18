@@ -101,8 +101,9 @@ const T = {
 
 // Branded merchants — TC and HM always present with full theming
 const BRANDED_MERCHANTS = {
-  TC: { name:"True Classic",  tagline:"Premium basics",      col:T.tcCol,  bg:T.tcBg,  br:T.tcBr,  dk:T.tcDk  },
-  HM: { name:"Hommey",        tagline:"Comfort home goods",  col:T.hmCol,  bg:T.hmBg,  br:T.hmBr,  dk:T.hmDk  },
+  TC: { name:"True Classic",  tagline:"Premium basics",      col:T.tcCol,    bg:T.tcBg,    br:T.tcBr,    dk:T.tcDk    },
+  HM: { name:"Hommey",        tagline:"Comfort home goods",  col:T.hmCol,    bg:T.hmBg,    br:T.hmBr,    dk:T.hmDk    },
+  TM: { name:"Test Merchant", tagline:"ShipBob test channel",col:T.purpleCol,bg:T.purpleBg,br:"#C4B5FD",  dk:"#5B21B6" },
 };
 
 // Palette for auto-generated dynamic merchants
@@ -144,12 +145,19 @@ const sbReturnToRMA = (ret) => {
   const refId       = (ret.reference_id || "").toLowerCase();
 
   let merId = "TC"; // fallback
-  if      (channelName.includes("hommey") || refId.includes("hommey")) merId = "HM";
-  else if (channelName.includes("true classic") || refId.includes("tc")) merId = "TC";
-  else if (ret.channel?.id) {
-    // Use channel ID as a stable merchant key
-    merId = `CH${ret.channel.id}`;
-  }
+const CHANNEL_MAP = {
+  178091: "TM",
+  178142: "TM",
+};
+if (CHANNEL_MAP[ret.channel?.id]) {
+  merId = CHANNEL_MAP[ret.channel?.id];
+} else if (channelName.includes("hommey") || refId.includes("hommey")) {
+  merId = "HM";
+} else if (channelName.includes("true classic") || refId.includes("tc")) {
+  merId = "TC";
+} else if (ret.channel?.id) {
+  merId = `CH${ret.channel.id}`;
+}
 
   // Auto-register dynamic merchant if not known
   const merName = ret.channel?.name || merId;
