@@ -15,9 +15,9 @@ export default async function handler(req, res) {
 
   // ShipBob 1.0 API
   const ENDPOINTS = {
-    returns: "https://api.shipbob.com/1.0/return",
-    channel: "https://api.shipbob.com/1.0/channel",
-    orders:  "https://api.shipbob.com/1.0/order",
+returns: "https://sandbox-api.shipbob.com/1.0/return",
+channel: "https://sandbox-api.shipbob.com/1.0/channel",
+orders:  "https://sandbox-api.shipbob.com/1.0/order",
   };
 
   const baseUrl = ENDPOINTS[endpoint];
