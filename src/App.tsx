@@ -193,14 +193,16 @@ const fetchSBReturns = async () => {
   while (true) {
     const res = await fetch(`${SB_PROXY}?endpoint=returns&page=${page}&limit=${limit}`);
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: res.statusText }));
-      throw new Error(err.details || err.error || `HTTP ${res.status}`);
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        errMsg = errJson.details || errJson.error || errMsg;
+      } catch {}
+      throw new Error(errMsg);
     }
     const data = await res.json();
-    // ShipBob may return array directly or wrapped in { data: [] } or { items: [] }
     const items = Array.isArray(data) ? data : (data.data || data.items || data.returns || []);
     results.push(...items);
-    // Stop if we got fewer than a full page
     if (items.length < limit) break;
     page++;
   }
@@ -406,18 +408,27 @@ function UploadScreen({ rmas, onUpload, onBack }) {
       }
       const newRMAs = {};
       const newMers = new Set();
-      raw.forEach(ret => {
-        const rma = sbReturnToRMA(ret);
-        newRMAs[rma.id] = rma;
-        newMers.add(rma.mer);
+      raw.forEach((ret, i) => {
+        try {
+          const rma = sbReturnToRMA(ret);
+          newRMAs[rma.id] = rma;
+          newMers.add(rma.mer);
+        } catch (mapErr) {
+          console.error(`Failed to map return ${i}:`, mapErr, ret);
+        }
       });
       const loaded = Object.keys(newRMAs).length;
+      if (loaded === 0) {
+        setSbStatus("error");
+        setSbMsg("Returns were fetched but could not be mapped. Check console for details.");
+        return;
+      }
       onUpload(newRMAs, [...newMers]);
       setSbStatus("success");
       setSbMsg(`✓ ${loaded} return${loaded !== 1 ? "s" : ""} synced from ShipBob across ${newMers.size} merchant${newMers.size !== 1 ? "s" : ""}`);
     } catch (e) {
       setSbStatus("error");
-      setSbMsg(e.message || "Could not connect to ShipBob");
+      setSbMsg(`Error: ${e.message || "Could not connect to ShipBob"}`);
     }
   };
 
