@@ -101,9 +101,10 @@ const T = {
 
 // Branded merchants — TC and HM always present with full theming
 const BRANDED_MERCHANTS = {
-  TC: { name:"True Classic",  tagline:"Premium basics",      col:T.tcCol,    bg:T.tcBg,    br:T.tcBr,    dk:T.tcDk    },
-  HM: { name:"Hommey",        tagline:"Comfort home goods",  col:T.hmCol,    bg:T.hmBg,    br:T.hmBr,    dk:T.hmDk    },
-  TM: { name:"Test Merchant", tagline:"ShipBob test channel",col:T.purpleCol,bg:T.purpleBg,br:"#C4B5FD",  dk:"#5B21B6" },
+  TC: { name:"True Classic",  tagline:"Premium basics",       col:T.tcCol,    bg:T.tcBg,    br:T.tcBr,    dk:T.tcDk    },
+  HM: { name:"Hommey",        tagline:"Comfort home goods",   col:T.hmCol,    bg:T.hmBg,    br:T.hmBr,    dk:T.hmDk    },
+  TM: { name:"Test Merchant", tagline:"ShipBob test channel", col:T.purpleCol,bg:T.purpleBg,br:"#C4B5FD",  dk:"#5B21B6" },
+  LP: { name:"Loop Returns",  tagline:"Loop warehouse queue", col:"#0891B2",  bg:"#ECFEFF",  br:"#67E8F9",  dk:"#0E7490" },
 };
 
 // Palette for auto-generated dynamic merchants
@@ -145,19 +146,12 @@ const sbReturnToRMA = (ret) => {
   const refId       = (ret.reference_id || "").toLowerCase();
 
   let merId = "TC"; // fallback
-const CHANNEL_MAP = {
-  178091: "TM",
-  178142: "TM",
-};
-if (CHANNEL_MAP[ret.channel?.id]) {
-  merId = CHANNEL_MAP[ret.channel?.id];
-} else if (channelName.includes("hommey") || refId.includes("hommey")) {
-  merId = "HM";
-} else if (channelName.includes("true classic") || refId.includes("tc")) {
-  merId = "TC";
-} else if (ret.channel?.id) {
-  merId = `CH${ret.channel.id}`;
-}
+  if      (channelName.includes("hommey") || refId.includes("hommey")) merId = "HM";
+  else if (channelName.includes("true classic") || refId.includes("tc")) merId = "TC";
+  else if (ret.channel?.id) {
+    // Use channel ID as a stable merchant key
+    merId = `CH${ret.channel.id}`;
+  }
 
   // Auto-register dynamic merchant if not known
   const merName = ret.channel?.name || merId;
@@ -210,6 +204,67 @@ const fetchSBReturns = async () => {
     }
     const data = await res.json();
     const items = Array.isArray(data) ? data : (data.data || data.items || data.returns || []);
+    results.push(...items);
+    if (items.length < limit) break;
+    page++;
+  }
+  return results;
+};
+
+// ── LOOP RETURNS API ───────────────────────────────────────
+const LOOP_PROXY = "/api/loop";
+
+// Map a Loop return object → ReturnBob RMA shape
+const loopReturnToRMA = (ret) => {
+  // Loop returns are always under the Loop merchant card
+  const merId = "LP";
+  ensureMerchant(merId, "Loop Returns");
+
+  // Loop return structure
+  const lineItems = ret.line_items || ret.return_line_items || [];
+  const firstItem = lineItems[0] || {};
+  const name      = firstItem.product_title || firstItem.name || ret.order_name || "Loop return";
+  const sku       = firstItem.sku || String(firstItem.variant_id || ret.id || "—");
+  const variant   = firstItem.variant_title || firstItem.size || "—";
+  const qty       = String(lineItems.reduce((s, i) => s + (i.quantity || 1), 0) || 1);
+  const reason    = firstItem.reason || firstItem.return_reason || ret.return_reason || "Not specified";
+  const orderId   = ret.order_name || ret.order_id || "";
+
+  return {
+    id:       `loop-${ret.id || ret.return_id || Date.now()}`,
+    mer:      merId,
+    sku,
+    name,
+    var:      variant,
+    reason,
+    qty,
+    orderN:   String(orderId),
+    labelBC:  ret.tracking_number || ret.label_url || "",
+    bagBC:    "",
+    prev:     false,
+    img:      "🔄",
+    fromLoop: true,
+    loopStatus: ret.status || "",
+  };
+};
+
+// Fetch all returns from Loop via proxy
+const fetchLoopReturns = async () => {
+  const results = [];
+  let page = 1;
+  const limit = 50;
+  while (true) {
+    const res = await fetch(`${LOOP_PROXY}?endpoint=returns&page=${page}&limit=${limit}`);
+    if (!res.ok) {
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        errMsg = errJson.details || errJson.error || errMsg;
+      } catch {}
+      throw new Error(`Loop: ${errMsg}`);
+    }
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : (data.data || data.items || data.returns || data.warehouse_returns || []);
     results.push(...items);
     if (items.length < limit) break;
     page++;
@@ -403,6 +458,8 @@ function UploadScreen({ rmas, onUpload, onBack }) {
   const [result,   setResult]   = useState(null);
   const [sbStatus, setSbStatus] = useState("idle");
   const [sbMsg,    setSbMsg]    = useState("");
+  const [lpStatus, setLpStatus] = useState("idle");
+  const [lpMsg,    setLpMsg]    = useState("");
   const fileRef = useRef();
 
   const syncShipBob = async () => {
@@ -437,6 +494,41 @@ function UploadScreen({ rmas, onUpload, onBack }) {
     } catch (e) {
       setSbStatus("error");
       setSbMsg(`Error: ${e.message || "Could not connect to ShipBob"}`);
+    }
+  };
+
+  const syncLoop = async () => {
+    setLpStatus("loading"); setLpMsg(""); setErr(null); setResult(null);
+    try {
+      const raw = await fetchLoopReturns();
+      if (!raw.length) {
+        setLpStatus("error");
+        setLpMsg("No returns found in Loop. Check your warehouse queue has active returns.");
+        return;
+      }
+      const newRMAs = {};
+      const newMers = new Set();
+      raw.forEach((ret, i) => {
+        try {
+          const rma = loopReturnToRMA(ret);
+          newRMAs[rma.id] = rma;
+          newMers.add(rma.mer);
+        } catch (mapErr) {
+          console.error(`Failed to map Loop return ${i}:`, mapErr, ret);
+        }
+      });
+      const loaded = Object.keys(newRMAs).length;
+      if (loaded === 0) {
+        setLpStatus("error");
+        setLpMsg("Returns were fetched but could not be mapped. Check console for details.");
+        return;
+      }
+      onUpload(newRMAs, [...newMers]);
+      setLpStatus("success");
+      setLpMsg(`✓ ${loaded} return${loaded !== 1 ? "s" : ""} synced from Loop`);
+    } catch (e) {
+      setLpStatus("error");
+      setLpMsg(`Error: ${e.message || "Could not connect to Loop"}`);
     }
   };
 
@@ -505,6 +597,38 @@ function UploadScreen({ rmas, onUpload, onBack }) {
             <div style={{ background:T.redBg, border:`1px solid ${T.redBr}`, borderRadius:10, padding:"12px 14px" }}>
               <div style={{ fontSize:13, fontWeight:700, color:T.redCol }}>⚠ {sbMsg}</div>
               <button onClick={()=>{setSbStatus("idle");setSbMsg("");}} style={{ marginTop:8, fontSize:12, color:T.blueCol, background:"none", border:"none", cursor:"pointer", padding:0 }}>Try again</button>
+            </div>
+          )}
+        </Card>
+
+        {/* ── Loop Returns Sync Card ── */}
+        <Card style={{ border:"1.5px solid #67E8F9", background:"#ECFEFF", marginBottom:16 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
+            <div style={{ width:44, height:44, borderRadius:12, background:T.bg, border:"1px solid #67E8F9", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>🔄</div>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:"#0891B2" }}>Sync from Loop Returns</div>
+              <div style={{ fontSize:12, color:"#0891B2", opacity:0.8, marginTop:2 }}>Pulls warehouse queue from Loop</div>
+            </div>
+          </div>
+          {lpStatus === "idle" && (
+            <Btn onClick={syncLoop} col="#0891B2" style={{ fontSize:14, padding:"13px" }}>↻ Sync returns from Loop now</Btn>
+          )}
+          {lpStatus === "loading" && (
+            <div style={{ textAlign:"center", padding:"14px 0" }}>
+              <div style={{ fontSize:13, color:"#0891B2", fontWeight:600 }}>Fetching from Loop…</div>
+              <div style={{ fontSize:11, color:"#0891B2", opacity:0.7, marginTop:4 }}>This may take a few seconds</div>
+            </div>
+          )}
+          {lpStatus === "success" && (
+            <div style={{ background:T.greenBg, border:`1px solid ${T.greenBr}`, borderRadius:10, padding:"12px 14px" }}>
+              <div style={{ fontSize:13, fontWeight:700, color:T.greenCol }}>{lpMsg}</div>
+              <button onClick={()=>{setLpStatus("idle");setLpMsg("");}} style={{ marginTop:8, fontSize:12, color:"#0891B2", background:"none", border:"none", cursor:"pointer", padding:0 }}>Sync again</button>
+            </div>
+          )}
+          {lpStatus === "error" && (
+            <div style={{ background:T.redBg, border:`1px solid ${T.redBr}`, borderRadius:10, padding:"12px 14px" }}>
+              <div style={{ fontSize:13, fontWeight:700, color:T.redCol }}>⚠ {lpMsg}</div>
+              <button onClick={()=>{setLpStatus("idle");setLpMsg("");}} style={{ marginTop:8, fontSize:12, color:"#0891B2", background:"none", border:"none", cursor:"pointer", padding:0 }}>Try again</button>
             </div>
           )}
         </Card>
